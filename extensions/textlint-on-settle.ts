@@ -1,7 +1,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import Ajv from "ajv/dist/2020.js";
 import * as textlint from "textlint";
+import * as yaml from "yaml";
 import { runHarness } from "../lib/run-harness.mjs";
 
 const MARKDOWN_PATTERN = /\.(?:md|markdown)$/i;
@@ -78,6 +80,8 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 async function lintProject(cwd: string, files: string[] = []) {
 	return runHarness({
 		textlint,
+		yaml,
+		Ajv,
 		cwd,
 		files,
 		configFilePath: path.join(packageRoot, ".textlintrc.json"),

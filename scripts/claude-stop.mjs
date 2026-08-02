@@ -15,9 +15,15 @@ if (!pluginRoot || !pluginData || !projectDir) {
 try {
   const requireFromData = createRequire(path.join(pluginData, "package.json"));
   const textlintPath = requireFromData.resolve("textlint");
+  const yamlPath = requireFromData.resolve("yaml");
+  const ajvPath = requireFromData.resolve("ajv/dist/2020.js");
   const textlint = await import(pathToFileURL(textlintPath).href);
+  const yaml = await import(pathToFileURL(yamlPath).href);
+  const { default: Ajv } = await import(pathToFileURL(ajvPath).href);
   const result = await runHarness({
     textlint,
+    yaml,
+    Ajv,
     cwd: projectDir,
     configFilePath: path.join(pluginRoot, ".textlintrc.json"),
     nodeModulesDir: path.join(pluginData, "node_modules"),

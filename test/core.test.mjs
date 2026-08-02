@@ -3,7 +3,9 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import Ajv from "ajv/dist/2020.js";
 import * as textlint from "textlint";
+import * as yaml from "yaml";
 import { hashContent } from "../lib/core/content-hash.mjs";
 import { createSurfaceFinding } from "../lib/core/finding.mjs";
 import { resolveTargetPatterns } from "../lib/core/target-files.mjs";
@@ -61,6 +63,8 @@ await test("runHarnessは指定したMarkdownだけを決定論的なJSONへ変�
 
     const options = {
       textlint,
+      yaml,
+      Ajv,
       cwd,
       files: ["target.md"],
       configFilePath: path.join(projectRoot, ".textlintrc.json"),
@@ -79,8 +83,106 @@ await test("runHarnessは指定したMarkdownだけを決定論的なJSONへ変�
   }
 });
 
+await test("runHarnessは文書契約を検証して契約ハッシュを記録する", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-contract-"));
+  try {
+    await writeFile(path.join(cwd, "article.md"), "# 検証対象\n");
+    await writeFile(
+      path.join(cwd, "article.md.intent.yml"),
+      `version: 1
+profile: technical-explainer
+audience:
+  problem: 読者が導入方法を判断できない
+reader_delta:
+  know: [検査内容]
+  decide: [導入の可否]
+  do: [検査の実行]
+requirements:
+  critical: [実行方法]
+`,
+    );
+
+    const result = await runHarness({
+      textlint,
+      yaml,
+      Ajv,
+      cwd,
+      files: ["article.md"],
+      configFilePath: path.join(projectRoot, ".textlintrc.json"),
+      nodeModulesDir: path.join(projectRoot, "node_modules"),
+    });
+
+    assert.equal(result.report.findings.length, 0);
+    assert.equal(result.report.documents[0].contract.status, "valid");
+    assert.match(result.report.documents[0].contract.contractHash, /^sha256:[a-f0-9]{64}$/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+await test("Contract gateはSchema違反を行番号付きで報告する", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-invalid-contract-"));
+  try {
+    await writeFile(path.join(cwd, "article.md"), "# 検証対象\n");
+    await writeFile(
+      path.join(cwd, "article.md.intent.yml"),
+      `version: 1
+profile: unknown-profile
+audience:
+  problem: 読者の問題
+reader_delta:
+  know: []
+  decide: []
+  do: []
+requirements:
+  critical: [必須内容]
+`,
+    );
+
+    const result = await runHarness({
+      textlint,
+      yaml,
+      Ajv,
+      cwd,
+      files: ["article.md"],
+      configFilePath: path.join(projectRoot, ".textlintrc.json"),
+      nodeModulesDir: path.join(projectRoot, "node_modules"),
+    });
+
+    const finding = result.report.findings.find((item) => item.ruleId === "contract/schema/enum");
+    assert.ok(finding);
+    assert.equal(finding.location.startLine, 2);
+    assert.equal(result.report.documents[0].contract.status, "invalid");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+await test("strict modeは文書契約の欠落をneeds_authorとして報告する", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-strict-"));
+  try {
+    await writeFile(path.join(cwd, "article.md"), "# 検証対象\n");
+    const result = await runHarness({
+      textlint,
+      yaml,
+      Ajv,
+      cwd,
+      files: ["article.md"],
+      reviewMode: "strict",
+      configFilePath: path.join(projectRoot, ".textlintrc.json"),
+      nodeModulesDir: path.join(projectRoot, "node_modules"),
+    });
+
+    assert.equal(result.report.findings[0].ruleId, "contract/missing");
+    assert.equal(result.report.findings[0].resolution, "needs_author");
+    assert.equal(result.report.findings[0].repairableByAgent, false);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 await test("公開するJSON Schemaは有効なJSONである", async () => {
-  for (const file of ["finding.schema.json", "report.schema.json"]) {
+  for (const file of ["finding.schema.json", "report.schema.json", "intent.schema.json"]) {
     const content = await readFile(path.join(projectRoot, "schemas", file), "utf8");
     assert.doesNotThrow(() => JSON.parse(content));
   }

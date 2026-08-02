@@ -1,6 +1,6 @@
 {
   "name": "jp-docs-harness",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "AIが生成する日本語ドキュメントの品質を検査するハーネス",
   "type": "module",
   "license": "MIT",
@@ -42,7 +42,9 @@
   },
   "dependencies": {
     "@textlint-ja/textlint-rule-preset-ai-writing": "1.7.0",
-    "textlint": "15.8.0"
+    "ajv": "8.18.0",
+    "textlint": "15.8.0",
+    "yaml": "2.8.3"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"

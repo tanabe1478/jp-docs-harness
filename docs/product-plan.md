@@ -496,7 +496,7 @@ jp-docs-harness/
 
 ### Phase 1: 検査基盤の一般化
 
-状態は進行中です。最初の実装単位として、`runHarness`、対象ファイル指定、共通finding形式、本文ハッシュ、JSON出力、Node.js標準テストランナーを導入しました。次の実装単位でContractとFreshnessのゲートインターフェースを追加します。
+状態は進行中です。`runHarness`、対象ファイル指定、共通finding形式、本文ハッシュ、JSON出力、Node.js標準テストランナー、Surface gate、Contract gateを導入しました。Phase 1に残っている実装はFreshness gateです。
 
 textlint専用の実行処理を、複数ゲートを扱える`runHarness`へ置き換えます。
 
@@ -518,7 +518,7 @@ textlint専用の実行処理を、複数ゲートを扱える`runHarness`へ置
 
 ### Phase 2: Document ContractとCompleteness
 
-`*.intent.yml`と文書プロファイルを導入します。この段階では意味に関する自動修正を行いません。
+状態は進行中です。`*.intent.yml`のJSON Schema、YAML検証、契約ハッシュ、`manual`、`contracted`、`strict`の実行モードを導入しました。型付きメタルーブリックのコンパイラとreview packetは未実装です。この段階では意味に関する自動修正を行いません。
 
 実装対象は次の通りです。
 

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import Ajv from "ajv/dist/2020.js";
 import * as textlint from "textlint";
+import * as yaml from "yaml";
 import { runHarness } from "../lib/run-harness.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,8 +18,11 @@ try {
 
   const result = await runHarness({
     textlint,
+    yaml,
+    Ajv,
     cwd,
     files: options.files,
+    reviewMode: options.reviewMode,
     configFilePath: path.join(packageRoot, ".textlintrc.json"),
     nodeModulesDir: path.join(packageRoot, "node_modules"),
   });
@@ -38,6 +43,7 @@ function parseArguments(args) {
   const files = [];
   let format = "stylish";
   let help = false;
+  let reviewMode = "manual";
 
   for (let index = 0; index < remaining.length; index += 1) {
     const argument = remaining[index];
@@ -50,6 +56,13 @@ function parseArguments(args) {
       }
       format = value;
       index += 1;
+    } else if (argument === "--review-mode") {
+      const value = remaining[index + 1];
+      if (!["manual", "contracted", "strict"].includes(value)) {
+        throw new Error("--review-modeにはmanual、contracted、strictのいずれかを指定してください");
+      }
+      reviewMode = value;
+      index += 1;
     } else if (argument === "--help" || argument === "-h") {
       help = true;
     } else if (argument.startsWith("-")) {
@@ -59,9 +72,9 @@ function parseArguments(args) {
     }
   }
 
-  return { files, format, help };
+  return { files, format, help, reviewMode };
 }
 
 function printHelp() {
-  process.stdout.write(`jp-docs-harness [lint] [options] [files...]\n\nOptions:\n  --format <stylish|json>  出力形式を指定する\n  --json                   --format jsonの短縮形\n  -h, --help               ヘルプを表示する\n`);
+  process.stdout.write(`jp-docs-harness [lint] [options] [files...]\n\nOptions:\n  --format <stylish|json>                 出力形式を指定する\n  --json                                  --format jsonの短縮形\n  --review-mode <manual|contracted|strict> 文書契約の適用方法を指定する\n  -h, --help                              ヘルプを表示する\n`);
 }
