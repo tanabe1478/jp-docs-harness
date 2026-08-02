@@ -10,6 +10,8 @@ import { hashContent } from "../lib/core/content-hash.mjs";
 import { createSurfaceFinding } from "../lib/core/finding.mjs";
 import { resolveTargetPatterns } from "../lib/core/target-files.mjs";
 import { runHarness } from "../lib/run-harness.mjs";
+import { compileRubric } from "../lib/semantic/compile-rubric.mjs";
+import { prepareReviewPackets } from "../lib/semantic/prepare-review.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 
@@ -181,8 +183,86 @@ await test("strict modeは文書契約の欠落をneeds_authorとして報告す
   }
 });
 
+await test("compileRubricは型付き要件を決定論的なチェックへ変換する", () => {
+  const contract = {
+    requirements: [
+      {
+        id: "install-flow",
+        importance: "answer-critical",
+        type: "process",
+        description: "導入手順",
+        ordered_steps: [
+          { text: "marketplaceを追加する", mandatory: true },
+          { text: "Pluginをインストールする", mandatory: true },
+          { text: "Pluginを再読み込みする", mandatory: false },
+        ],
+      },
+      {
+        id: "choices",
+        importance: "answer-critical",
+        type: "flexible-list",
+        description: "選択肢",
+        items: ["A", "B", "C"],
+        baseline: 2,
+      },
+    ],
+    evidence: { author_only: ["導入を決めた理由"] },
+  };
+
+  const first = compileRubric(contract);
+  const second = compileRubric(contract);
+  assert.deepEqual(first, second);
+  assert.equal(first.checks.filter((check) => check.metaRubricId === "install-flow").length, 5);
+  assert.equal(first.checks.find((check) => check.id === "choices-baseline").importance, "answer-critical");
+  assert.equal(first.checks.find((check) => check.id === "choices-item-1").importance, "valuable");
+  assert.deepEqual(first.authorOnly, ["導入を決めた理由"]);
+});
+
+await test("prepareReviewPacketsは本文、契約、コンパイル済みチェックをまとめる", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-prepare-"));
+  try {
+    await writeFile(path.join(cwd, "guide.md"), "# 導入ガイド\n");
+    await writeFile(
+      path.join(cwd, "guide.md.intent.yml"),
+      `version: 1
+profile: tutorial
+audience:
+  problem: 導入方法が分からない
+reader_delta:
+  know: [必要な手順]
+  decide: [導入の可否]
+  do: [Pluginの導入]
+requirements:
+  critical: [インストール手順]
+evidence:
+  author_only: [このツールを採用した理由]
+`,
+    );
+
+    const [packet] = await prepareReviewPackets({
+      yaml,
+      Ajv,
+      cwd,
+      files: ["guide.md"],
+      intentSchemaPath: path.join(projectRoot, "schemas", "intent.schema.json"),
+    });
+
+    assert.equal(packet.document.path, "guide.md");
+    assert.equal(packet.contract.profile, "tutorial");
+    assert.equal(packet.rubric.checks[0].id, "critical-001-fact");
+    assert.deepEqual(packet.rubric.authorOnly, ["このツールを採用した理由"]);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 await test("公開するJSON Schemaは有効なJSONである", async () => {
-  for (const file of ["finding.schema.json", "report.schema.json", "intent.schema.json"]) {
+  for (const file of [
+    "finding.schema.json",
+    "report.schema.json",
+    "intent.schema.json",
+    "review-packet.schema.json",
+  ]) {
     const content = await readFile(path.join(projectRoot, "schemas", file), "utf8");
     assert.doesNotThrow(() => JSON.parse(content));
   }

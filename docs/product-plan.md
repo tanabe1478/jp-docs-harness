@@ -518,7 +518,7 @@ textlint専用の実行処理を、複数ゲートを扱える`runHarness`へ置
 
 ### Phase 2: Document ContractとCompleteness
 
-状態は進行中です。`*.intent.yml`のJSON Schema、YAML検証、契約ハッシュ、`manual`、`contracted`、`strict`の実行モードを導入しました。型付きメタルーブリックのコンパイラとreview packetは未実装です。この段階では意味に関する自動修正を行いません。
+状態は進行中です。`*.intent.yml`のJSON Schema、YAML検証、契約ハッシュ、`manual`、`contracted`、`strict`の実行モード、型付きメタルーブリックのコンパイラ、review packetを導入しました。Phase 2に残っている実装は、現在のエージェントによるチェック判定と結果保存への接続です。この段階では意味に関する自動修正を行いません。
 
 実装対象は次の通りです。
 

@@ -5,14 +5,32 @@ import Ajv from "ajv/dist/2020.js";
 import * as textlint from "textlint";
 import * as yaml from "yaml";
 import { runHarness } from "../lib/run-harness.mjs";
+import { prepareReviewPackets } from "../lib/semantic/prepare-review.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cwd = path.resolve(process.cwd());
+const configFilePath = path.join(packageRoot, ".textlintrc.json");
+const intentSchemaPath = path.join(packageRoot, "schemas", "intent.schema.json");
 
 try {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
     printHelp();
+    process.exit(0);
+  }
+
+  if (options.command === "prepare") {
+    if (options.files.length !== 1) {
+      throw new Error("prepareにはMarkdownファイルを1件指定してください");
+    }
+    const packets = await prepareReviewPackets({
+      yaml,
+      Ajv,
+      cwd,
+      files: options.files,
+      intentSchemaPath,
+    });
+    process.stdout.write(`${JSON.stringify(packets[0], null, 2)}\n`);
     process.exit(0);
   }
 
@@ -23,8 +41,9 @@ try {
     cwd,
     files: options.files,
     reviewMode: options.reviewMode,
-    configFilePath: path.join(packageRoot, ".textlintrc.json"),
+    configFilePath,
     nodeModulesDir: path.join(packageRoot, "node_modules"),
+    intentSchemaPath,
   });
 
   if (options.format === "json") {
@@ -39,7 +58,10 @@ try {
 }
 
 function parseArguments(args) {
-  const remaining = args[0] === "lint" ? args.slice(1) : [...args];
+  const knownCommands = new Set(["lint", "prepare"]);
+  const hasCommand = knownCommands.has(args[0]);
+  const command = hasCommand ? args[0] : "lint";
+  const remaining = hasCommand ? args.slice(1) : [...args];
   const files = [];
   let format = "stylish";
   let help = false;
@@ -72,9 +94,9 @@ function parseArguments(args) {
     }
   }
 
-  return { files, format, help, reviewMode };
+  return { command, files, format, help, reviewMode };
 }
 
 function printHelp() {
-  process.stdout.write(`jp-docs-harness [lint] [options] [files...]\n\nOptions:\n  --format <stylish|json>                 出力形式を指定する\n  --json                                  --format jsonの短縮形\n  --review-mode <manual|contracted|strict> 文書契約の適用方法を指定する\n  -h, --help                              ヘルプを表示する\n`);
+  process.stdout.write(`jp-docs-harness <command> [options] [files...]\n\nCommands:\n  lint [files...]          決定論的な検査を実行する\n  prepare <file>           意味レビュー用のreview packetを生成する\n\nOptions for lint:\n  --format <stylish|json>                 出力形式を指定する\n  --json                                  --format jsonの短縮形\n  --review-mode <manual|contracted|strict> 文書契約の適用方法を指定する\n  -h, --help                              ヘルプを表示する\n`);
 }

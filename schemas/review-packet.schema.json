@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tanabe1478/jp-docs-harness/schemas/review-packet.schema.json",
+  "title": "jp-docs-harness review packet",
+  "type": "object",
+  "required": ["schemaVersion", "document", "contract", "rubric"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "document": {
+      "type": "object",
+      "required": ["path", "contentHash", "content"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "content": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "contract": {
+      "type": "object",
+      "required": ["path", "contractHash", "profile", "audience", "readerDelta", "evidence", "nonGoals"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "contractHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "profile": { "type": "string", "minLength": 1 },
+        "audience": { "type": "object" },
+        "readerDelta": { "type": "object" },
+        "evidence": { "type": "object" },
+        "nonGoals": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "rubric": {
+      "type": "object",
+      "required": ["metaRubrics", "checks", "authorOnly"],
+      "properties": {
+        "metaRubrics": { "type": "array", "items": { "type": "object" } },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "metaRubricId", "kind", "importance", "criterion", "sourcePolicy"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "metaRubricId": { "type": "string", "minLength": 1 },
+              "kind": { "type": "string", "minLength": 1 },
+              "importance": { "enum": ["answer-critical", "valuable", "context"] },
+              "criterion": { "type": "string", "minLength": 1 },
+              "sourcePolicy": { "enum": ["contract", "author-required"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "authorOnly": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

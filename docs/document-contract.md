@@ -41,7 +41,7 @@ requirements:
     - 開発環境の構成
 ```
 
-`critical`、`valuable`、`context`は、型付きメタルーブリックを導入しやすくするための簡略記法です。各文字列を`Simple Knowledge`として扱うコンパイラは、次の実装単位で追加します。
+`critical`、`valuable`、`context`は、型付きメタルーブリックを導入しやすくするための簡略記法です。コンパイラは各文字列を`Simple Knowledge`として扱います。
 
 ## 型付き要件
 
@@ -86,7 +86,7 @@ requirements:
 | `process` | `ordered_steps` |
 | `relationship` | `entities`、`aspects` |
 
-型付き要件から独立したチェックを生成する処理は未実装です。現在は契約の構文、Schema、ハッシュだけを検査します。
+型付き要件は、固定規則で自己完結したチェックへ変換されます。Strict Listは項目ごとのチェック、Flexible Listは最低網羅率と追加項目のチェック、Processは各手順の存在と順序のチェックへ変換されます。
 
 ## 検査モード
 
@@ -103,6 +103,18 @@ npx jp-docs-harness lint --review-mode strict docs/design.md
 ```
 
 `contracted`は、意味検査を実装した後に、契約がある文書だけを自動レビューするモードになります。現時点では`manual`と同じ契約検証を行います。
+
+## Review packetを生成する
+
+`prepare`コマンドは、本文、契約、ハッシュ、コンパイル済みチェックを一つのJSONへまとめます。
+
+```console
+npx jp-docs-harness prepare docs/design.md > review-packet.json
+```
+
+review packetは、Claude Codeやpiが意味レビューを行う際の入力です。生成時の会話は含めず、完成稿と明示された契約だけをJudgeへ渡せます。
+
+`evidence.author_only`はチェックへ自動変換せず、review packetの`rubric.authorOnly`へ保持します。Phase 3のAccountability gateが、人間の入力を必要とする項目として扱います。
 
 ## JSON出力
 
