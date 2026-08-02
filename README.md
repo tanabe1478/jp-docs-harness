@@ -114,3 +114,13 @@ npx jp-docs-harness prepare docs/design.md > review-packet.json
 npx jp-docs-harness record review-packet.json review-result.json
 npx jp-docs-harness verify docs/design.md
 ```
+
+Claude Codeとpiから意味レビューを実行できます。
+
+```text
+# Claude Code
+/jp-docs-harness:review-docs docs/design.md
+
+# pi
+/review-docs docs/design.md
+```

@@ -1,0 +1,52 @@
+---
+description: 文書契約に基づいてMarkdownの完全性と書き手入力を検査します。
+argument-hint: "<Markdownファイル>"
+disable-model-invocation: true
+---
+
+対象は`$ARGUMENTS`です。対象が空の場合は、ファイルを推測せず利用者へ指定を求めてください。
+
+## Review packet
+
+作業用ディレクトリを作り、review packetを生成してください。
+
+```console
+mkdir -p "${CLAUDE_PROJECT_DIR}/.jp-docs-harness/work"
+node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-review-cli.mjs" prepare "$ARGUMENTS" > "${CLAUDE_PROJECT_DIR}/.jp-docs-harness/work/review-packet.json"
+```
+
+生成に失敗した場合は、文書や契約を推測で補わず、エラーを利用者へ伝えてください。
+
+## 判定
+
+review packetだけを判定材料として使用してください。生成時の会話や、本文に書かれていない知識を根拠にしてはいけません。
+
+`rubric.checks`を一件ずつ独立して評価し、すべてのcheck IDについて次を返してください。
+
+- `meets`: 要件を正しく満たす
+- `partially_meets`: 方向は正しいが具体性または網羅性が不足する
+- `missing`: 必要な内容がない
+- `contradicts`: 読者を誤らせる実質的な矛盾がある
+
+指摘には本文の行範囲を付けてください。本文に根拠箇所がない`missing`は`location: null`とします。
+
+`rubric.authorOnly`も全件評価してください。本文と許可された根拠に情報がなければ`missing`とし、推測で`provided`にしてはいけません。
+
+結果を[`schemas/review-result.schema.json`](${CLAUDE_PLUGIN_ROOT}/schemas/review-result.schema.json)に適合するJSONとして、`${CLAUDE_PROJECT_DIR}/.jp-docs-harness/work/review-result.json`へ保存してください。`document`、`contract`、`rubricHash`はreview packetからそのままコピーします。`judge`には現在のproviderとmodelが分かる場合は記録し、分からない場合は`current-agent`とします。`promptVersion`は`1`です。
+
+## 記録と確認
+
+結果を検証して記録します。
+
+```console
+node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-review-cli.mjs" record ".jp-docs-harness/work/review-packet.json" ".jp-docs-harness/work/review-result.json"
+node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-review-cli.mjs" verify "$ARGUMENTS"
+```
+
+`record`が拒否した結果を、チェックの削除やハッシュの書き換えで通してはいけません。判定漏れ、未知のID、行番号を修正して再実行してください。
+
+## 修正方針
+
+`resolution: agent`かつ`repairableByAgent: true`の指摘だけを修正できます。`needs_author`は本文を変更せず、必要な入力を利用者へ質問してください。`uncertain`は断定へ変えず、不確実な理由を伝えてください。
+
+本文を修正した場合、review packetと結果は古くなります。修正後にprepare、判定、record、verifyを一度だけやり直してください。二回目にも問題が残る場合は自動修正を繰り返さず、未解決の指摘を利用者へ返してください。

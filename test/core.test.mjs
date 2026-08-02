@@ -295,13 +295,13 @@ evidence:
       contract: { path: packet.contract.path, contractHash: packet.contract.contractHash },
       rubricHash: packet.rubric.rubricHash,
       judge: { provider: "test", model: "test-model", promptVersion: "1" },
-      evaluations: packet.rubric.checks.map((check) => ({
+      evaluations: packet.rubric.checks.map((check, index) => ({
         checkId: check.id,
-        verdict: "meets",
-        resolution: "none",
-        justification: "本文の2行目で確認できる",
-        location: { startLine: 2, endLine: 2 },
-        repairableByAgent: false,
+        verdict: index === 0 ? "missing" : "meets",
+        resolution: index === 0 ? "agent" : "none",
+        justification: index === 0 ? "必要な手順が不足している" : "本文の2行目で確認できる",
+        location: index === 0 ? null : { startLine: 2, endLine: 2 },
+        repairableByAgent: index === 0,
       })),
       authorEvaluations: packet.rubric.authorOnly.map((item) => ({
         item,
@@ -326,6 +326,22 @@ evidence:
       reviewResultSchemaPath: path.join(projectRoot, "schemas", "review-result.schema.json"),
     });
     assert.equal(fresh.status, "fresh");
+
+    const harnessResult = await runHarness({
+      textlint,
+      yaml,
+      Ajv,
+      cwd,
+      files: ["guide.md"],
+      configFilePath: path.join(projectRoot, ".textlintrc.json"),
+      nodeModulesDir: path.join(projectRoot, "node_modules"),
+    });
+    assert.ok(harnessResult.report.findings.some((finding) => finding.ruleId.startsWith("semantic/")));
+    assert.ok(
+      harnessResult.report.findings.some(
+        (finding) => finding.ruleId.startsWith("accountability/") && finding.resolution === "needs_author",
+      ),
+    );
 
     await writeFile(path.join(cwd, "guide.md"), "# 導入ガイド\n変更した本文です。\n");
     const [changedPacket] = await prepare();

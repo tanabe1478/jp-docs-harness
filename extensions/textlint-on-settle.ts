@@ -27,6 +27,25 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 		},
 	});
 
+	pi.registerCommand("review-docs", {
+		description: "文書契約に基づいてMarkdownの完全性と根拠を検査する",
+		handler: async (args, ctx) => {
+			const target = args.trim();
+			if (!target || !MARKDOWN_PATTERN.test(target)) {
+				ctx.ui.notify("使用方法: /review-docs <Markdownファイル>", "warning");
+				return;
+			}
+			const absoluteTarget = path.resolve(ctx.cwd, target);
+			const relativeTarget = path.relative(ctx.cwd, absoluteTarget);
+			if (relativeTarget === ".." || relativeTarget.startsWith(`..${path.sep}`)) {
+				ctx.ui.notify("プロジェクト外の文書はレビューできません", "error");
+				return;
+			}
+			const cli = path.join(packageRoot, "bin", "jp-docs-harness.mjs");
+			pi.sendUserMessage(reviewInstructions(relativeTarget, cli));
+		},
+	});
+
 	pi.on("tool_call", (event) => {
 		if (event.toolName !== "write" && event.toolName !== "edit") return;
 
@@ -87,6 +106,22 @@ async function lintProject(cwd: string, files: string[] = []) {
 		configFilePath: path.join(packageRoot, ".textlintrc.json"),
 		nodeModulesDir: path.join(packageRoot, "node_modules"),
 	});
+}
+
+function reviewInstructions(target: string, cli: string): string {
+	const resultSchema = path.resolve(path.dirname(cli), "..", "schemas", "review-result.schema.json");
+	return `文書契約に基づいて ${target} を意味レビューしてください。
+
+次の手順を守ってください。
+
+1. \`mkdir -p .jp-docs-harness/work\`を実行する
+2. \`node ${JSON.stringify(cli)} prepare ${JSON.stringify(target)} > .jp-docs-harness/work/review-packet.json\`を実行する
+3. review packetだけを根拠として、すべてのchecksとauthorOnlyを独立して判定する
+4. ${resultSchema}の形式で.jp-docs-harness/work/review-result.jsonへ保存する
+5. \`node ${JSON.stringify(cli)} record .jp-docs-harness/work/review-packet.json .jp-docs-harness/work/review-result.json\`を実行する
+6. \`node ${JSON.stringify(cli)} verify ${JSON.stringify(target)}\`を実行する
+
+missing、contradicts、partially_meetsには本文の根拠行と理由を付けてください。needs_authorを推測で解決しないでください。agentが修正可能な指摘だけを一度修正できます。修正した場合はreview packetの生成から記録までを一度だけやり直し、問題が残れば利用者へ返してください。`;
 }
 
 function formatFeedback(output: string): string {

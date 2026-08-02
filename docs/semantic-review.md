@@ -128,6 +128,30 @@ jp-docs-harness lint --review-mode contracted docs/design.md
 
 `manual`モードでは保存結果がなくても失敗しません。保存結果が存在するものの古い場合は警告します。
 
-## 現在の制限
+## エージェントから実行する
 
-現時点のFreshness gateは、結果が現在の本文と契約に対応することだけを保証します。`missing`や`contradicts`の判定を通常のfindingへ変換するSemantic result gateと、エージェントが判定結果を作る`review-docs`は次の実装対象です。
+Claude Code Pluginでは、名前空間付きSkillを使用します。
+
+```text
+/jp-docs-harness:review-docs docs/design.md
+```
+
+pi packageでは、次のコマンドを使用します。
+
+```text
+/review-docs docs/design.md
+```
+
+どちらもprepare、全チェックの判定、record、verifyを順番に実行します。AIが修正できる指摘は一度だけ修正し、`needs_author`は本文を変更せず利用者へ返します。
+
+## Semantic result gate
+
+保存結果が`fresh`な場合、Semantic result gateが判定を通常のfindingへ変換します。
+
+- Answer-Criticalの`missing`と`partially_meets`はerror
+- `contradicts`は重要度にかかわらずerror
+- Valuableの問題はwarning
+- Contextの問題はinfo
+- author-onlyの`missing`は`needs_author`のerror
+
+これにより、Surface、Contract、Freshness、Semanticの結果を同じJSONレポートで扱えます。
