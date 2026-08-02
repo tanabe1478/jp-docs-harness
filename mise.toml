@@ -1,0 +1,14 @@
+[tools]
+node = "22.23.1"
+
+[tasks.setup]
+description = "依存パッケージをインストールする"
+run = "npm ci"
+
+[tasks.lint]
+description = "Markdown文書をtextlintで検査する"
+run = "npm run lint"
+
+[tasks.fix]
+description = "自動修正できる指摘を修正する"
+run = "npm run lint:fix"

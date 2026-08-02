@@ -1,0 +1,83 @@
+# jp-docs-harness
+
+AIが生成する日本語Markdownをtextlintで検査するハーネスです。
+AIが生成しがちな不自然な構造や表現を検出する`@textlint-ja/textlint-rule-preset-ai-writing`を使用します。
+
+Claude Code Pluginとpi packageの両方として配布できるため、導入先の各プロジェクトへ設定ファイルをコピーする必要はありません。
+
+## このリポジトリを開発する
+
+Node.jsのバージョンはmiseで管理します。
+
+```console
+mise install
+mise run setup
+mise run lint
+```
+
+ルールの設定は[`.textlintrc.json`](./.textlintrc.json)で管理します。
+
+## Claude Code Plugin
+
+ローカルで試す場合は、このリポジトリをPluginとして指定します。
+
+```console
+claude --plugin-dir /path/to/jp-docs-harness
+```
+
+継続して利用する場合は、リポジトリをマーケットプレイスとして追加してPluginをインストールします。
+
+```text
+/plugin marketplace add tanabe1478/jp-docs-harness
+/plugin install jp-docs-harness@jp-docs-harness-marketplace
+/reload-plugins
+```
+
+ユーザースコープでインストールすれば、Claude Codeを使用する複数のプロジェクトで有効になります。
+
+手動検査には、名前空間付きスラッシュコマンドを使用します。
+
+```text
+/jp-docs-harness:lint-docs
+```
+
+`Stop`フックはClaude Codeの応答終了時に一度だけ検査します。編集操作ごとにはtextlintを実行しません。初回起動時と依存関係の更新時には、Plugin専用の永続データディレクトリへ依存パッケージをインストールします。導入先プロジェクトの`package.json`は変更しません。
+
+Pluginの構成要素は次の場所にあります。
+
+- [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json)
+- [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
+- [`skills/lint-docs/SKILL.md`](./skills/lint-docs/SKILL.md)
+- [`hooks/hooks.json`](./hooks/hooks.json)
+
+## pi package
+
+ローカルパスからユーザースコープへインストールすると、複数のプロジェクトで利用できます。
+
+```console
+pi install /path/to/jp-docs-harness
+```
+
+Gitで公開した後は、Git URLからインストールできます。
+
+```console
+pi install git:github.com/tanabe1478/jp-docs-harness
+```
+
+piでは次のスラッシュコマンドを使用します。
+
+```text
+/lint-docs
+```
+
+[`extensions/textlint-on-settle.ts`](./extensions/textlint-on-settle.ts)はMarkdownへの`write`または`edit`を記録し、エージェントの処理が完了した`agent_settled`のタイミングで一度だけ検査します。指摘がある場合に限り、修正用のターンを一度だけ開始します。
+
+pi packageの依存関係はインストール時に自動で導入されます。導入先プロジェクトにNode.jsパッケージを追加する必要はありません。
+
+## CLI
+
+npmパッケージとして公開した後は、AIエージェントを使わずに検査できます。
+
+```console
+npx jp-docs-harness
+```

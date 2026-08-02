@@ -1,0 +1,15 @@
+{
+  "name": "jp-docs-harness-marketplace",
+  "description": "日本語ドキュメント品質ツールのマーケットプレイス",
+  "owner": {
+    "name": "tanabe1478",
+    "url": "https://github.com/tanabe1478"
+  },
+  "plugins": [
+    {
+      "name": "jp-docs-harness",
+      "source": "./",
+      "description": "AIが生成する日本語Markdownをtextlintで検査するハーネス"
+    }
+  ]
+}

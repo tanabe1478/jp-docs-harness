@@ -1,0 +1,61 @@
+{
+  "name": "jp-docs-harness",
+  "version": "0.2.0",
+  "description": "AIが生成する日本語ドキュメントの品質を検査するハーネス",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tanabe1478/jp-docs-harness.git"
+  },
+  "homepage": "https://github.com/tanabe1478/jp-docs-harness#readme",
+  "bugs": {
+    "url": "https://github.com/tanabe1478/jp-docs-harness/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "textlint",
+    "japanese",
+    "ai-writing"
+  ],
+  "bin": {
+    "jp-docs-harness": "./bin/jp-docs-harness.mjs"
+  },
+  "files": [
+    ".claude-plugin/",
+    ".textlintrc.json",
+    "AGENTS.md",
+    "bin/",
+    "extensions/",
+    "hooks/",
+    "lib/",
+    "prompts/",
+    "scripts/",
+    "skills/"
+  ],
+  "scripts": {
+    "lint": "node ./bin/jp-docs-harness.mjs",
+    "lint:fix": "textlint --fix \"**/*.md\"",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@textlint-ja/textlint-rule-preset-ai-writing": "1.7.0",
+    "textlint": "15.8.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    }
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/textlint-on-settle.ts"
+    ]
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  }
+}
