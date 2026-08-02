@@ -1,15 +1,15 @@
 {
   "schemaVersion": 2,
   "document": {
-    "path": "document.md",
+    "path": "eval/cases/grounding-basic/document.md",
     "contentHash": "sha256:7d377a4a02b9dab440dd505e3aa603bad211c5defe502be609a42e5f83491594"
   },
   "contract": {
-    "path": "document.md.intent.yml",
-    "contractHash": "sha256:be4a3ae9f0579d57571868c88039984a3c72a51021026827d04d571e6cd10432"
+    "path": "eval/cases/grounding-basic/document.md.intent.yml",
+    "contractHash": "sha256:d92f77220ce045796ece41253bb2f435b8ecc5c9471017ea0d5da3c364dbc277"
   },
   "rubricHash": "sha256:b8d91f403620d480744c2b932a0c34855f1032cf137a0935ed2ebb6637d84478",
-  "evidenceHash": "sha256:3887f8fc71f82e0ee14ab10d70d0f696d94b3ab4d04d12c3980263e95a39b2bd",
+  "evidenceHash": "sha256:3fa778856c87ebd5f296c8d7029de378ac14e0ecb507896c9f8c76e5ef6e124e",
   "judge": {
     "provider": "human",
     "model": "gold-label",

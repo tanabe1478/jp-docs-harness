@@ -112,7 +112,15 @@ requirements:
 
 ローカルの`path`はプロジェクト内だけを指定できます。`prepare`は1 MiB以下の資料をreview packetへ読み込み、内容のハッシュを`evidenceHash`へ反映します。資料を変更すると保存済みレビューは`stale`になります。
 
-URLは参照先として記録しますが、決定論的なprepare処理では取得しません。URLの内容を根拠に使う場合は、取得時点を管理したローカルスナップショットを`path`でも指定してください。
+URLは参照先として記録しますが、決定論的なprepare処理では取得しません。明示的な`snapshot`コマンドで取得します。
+
+```console
+jp-docs-harness snapshot docs/design.md
+```
+
+取得内容は`.jp-docs-harness/evidence/`、URL、内容ハッシュ、取得時刻、HTTPメタデータは`.jp-docs-harness/evidence.lock.json`へ保存されます。以後のprepareはネットワークへ接続せず、lockと内容ハッシュを検証します。同じ内容を再取得しても`evidenceHash`は変わりません。チームやCIで同じ根拠を使う場合は、snapshotとlockの両方をバージョン管理してください。
+
+snapshotは1 MiB以下のUTF-8テキストだけを受け入れます。localhost、private network、認証情報を含むURLを拒否し、各リダイレクト先も検査します。PDFなどのバイナリ資料は、テキストへ変換したローカルファイルを`path`で指定してください。
 
 ## 検査モード
 

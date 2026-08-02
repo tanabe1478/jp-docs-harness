@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tanabe1478/jp-docs-harness/schemas/evidence-lock.schema.json",
+  "title": "jp-docs-harness evidence snapshot lock",
+  "type": "object",
+  "required": ["schemaVersion", "sources"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "sources": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-f0-9]{64}$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["url", "path", "contentHash", "fetchedAt"],
+        "properties": {
+          "url": { "type": "string", "pattern": "^https?://" },
+          "resolvedUrl": { "type": "string", "pattern": "^https?://" },
+          "path": { "type": "string", "minLength": 1 },
+          "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "fetchedAt": { "type": "string", "format": "date-time" },
+          "contentType": { "type": "string", "minLength": 1 },
+          "etag": { "type": "string", "minLength": 1 },
+          "lastModified": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

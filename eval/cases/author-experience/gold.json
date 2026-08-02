@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "document": {
+    "path": "eval/cases/author-experience/document.md",
+    "contentHash": "sha256:49c99536887881ae0a5f52437c22910287cc430d8bf0712e6a7021a3d0dd4b84"
+  },
+  "contract": {
+    "path": "eval/cases/author-experience/document.md.intent.yml",
+    "contractHash": "sha256:8a5916be06c22a1a1148a0271af5fda46e3192b7ae11abe2e9f9767215867082"
+  },
+  "rubricHash": "sha256:814e0f6ec51af64ee23ea57eb5f41d805225684b0846a2271d8729e7e4d3148c",
+  "evidenceHash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "judge": {
+    "provider": "human",
+    "model": "gold-label",
+    "promptVersion": "2"
+  },
+  "evaluations": [
+    {
+      "checkId": "critical-001-fact",
+      "verdict": "meets",
+      "resolution": "none",
+      "justification": "本文3行目に採用理由がある",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "claimIds": [],
+      "repairableByAgent": false
+    }
+  ],
+  "authorEvaluations": [
+    {
+      "item": "実運用で障害対応を経験した事実",
+      "status": "provided",
+      "justification": "本文3行目に経験したとの記述がある",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      }
+    }
+  ],
+  "groundingCoverage": {
+    "status": "reviewed",
+    "justification": "書き手固有の経験に関する主張を確認した"
+  },
+  "claimEvaluations": [
+    {
+      "claimId": "claim-001",
+      "text": "私たちは実運用で障害対応を経験したため、この構成を採用しました。",
+      "kind": "author-experience",
+      "verdict": "unsupported",
+      "resolution": "needs_author",
+      "justification": "本文以外に書き手の経験を確認できる根拠がない",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    }
+  ]
+}

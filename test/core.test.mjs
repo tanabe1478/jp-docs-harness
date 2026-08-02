@@ -14,6 +14,10 @@ import { runHarness } from "../lib/run-harness.mjs";
 import { compileRubric } from "../lib/semantic/compile-rubric.mjs";
 import { prepareReviewPackets } from "../lib/semantic/prepare-review.mjs";
 import {
+  assertPublicHttpUrl,
+  snapshotUrlSources,
+} from "../lib/semantic/snapshot-sources.mjs";
+import {
   inspectStoredReview,
   recordReviewResult,
 } from "../lib/semantic/review-result.mjs";
@@ -476,6 +480,94 @@ evidence:
   }
 });
 
+await test("URL snapshotは明示的に取得され、改ざんとprivate URLを拒否する", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-snapshot-"));
+  try {
+    await writeFile(path.join(cwd, "guide.md"), "# 仕様\n上限は10件です。\n");
+    await writeFile(
+      path.join(cwd, "guide.md.intent.yml"),
+      `version: 1
+profile: reference
+audience:
+  problem: 上限が分からない
+reader_delta:
+  know: [上限]
+  decide: []
+  do: []
+requirements:
+  - id: limit
+    importance: answer-critical
+    type: simple-knowledge
+    description: 上限
+    fact: 上限は10件
+    source_ids: [spec]
+evidence:
+  sources:
+    - id: spec
+      url: https://docs.example.test/spec
+`,
+    );
+    const prepare = () =>
+      prepareReviewPackets({
+        yaml,
+        Ajv,
+        cwd,
+        files: ["guide.md"],
+        intentSchemaPath: path.join(projectRoot, "schemas", "intent.schema.json"),
+      });
+    const [external] = await prepare();
+    assert.equal(external.grounding.sources[0].status, "external");
+    const missingSnapshot = await runHarness({
+      textlint,
+      yaml,
+      Ajv,
+      cwd,
+      files: ["guide.md"],
+      configFilePath: path.join(projectRoot, ".textlintrc.json"),
+      nodeModulesDir: path.join(projectRoot, "node_modules"),
+    });
+    assert.ok(
+      missingSnapshot.report.findings.some(
+        (finding) => finding.ruleId === "evidence/external" && finding.resolution === "agent",
+      ),
+    );
+
+    await snapshotUrlSources({
+      cwd,
+      sources: external.contract.evidence.sources,
+      assertSafeUrl: async () => {},
+      now: () => "2026-01-01T00:00:00.000Z",
+      fetchImpl: async () =>
+        new Response("仕様上限: 10件\n", {
+          status: 200,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        }),
+    });
+    const [loaded] = await prepare();
+    assert.equal(loaded.grounding.sources[0].status, "loaded");
+    const stableHash = loaded.grounding.evidenceHash;
+
+    const snapshotPath = path.join(cwd, loaded.grounding.sources[0].snapshotPath);
+    await writeFile(snapshotPath, "改ざんされた内容\n");
+    const [invalid] = await prepare();
+    assert.equal(invalid.grounding.sources[0].status, "invalid-snapshot");
+
+    await snapshotUrlSources({
+      cwd,
+      sources: external.contract.evidence.sources,
+      assertSafeUrl: async () => {},
+      now: () => "2026-02-01T00:00:00.000Z",
+      fetchImpl: async () => new Response("仕様上限: 10件\n", { status: 200 }),
+    });
+    const [resnapshotted] = await prepare();
+    assert.equal(resnapshotted.grounding.evidenceHash, stableHash);
+    await assert.rejects(assertPublicHttpUrl("http://127.0.0.1/private"), /private network/);
+    await assert.rejects(assertPublicHttpUrl("https://localhost/spec"), /localhost/);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 await test("contracted modeは意味レビューの欠落を報告する", async () => {
   const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-contracted-"));
   try {
@@ -540,6 +632,7 @@ await test("evalはJudge結果を単一スコアにせず次元別に比較す�
 
 await test("公開するJSON Schemaは有効なJSONである", async () => {
   for (const file of [
+    "evidence-lock.schema.json",
     "finding.schema.json",
     "report.schema.json",
     "intent.schema.json",

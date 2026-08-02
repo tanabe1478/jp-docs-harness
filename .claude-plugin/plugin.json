@@ -1,7 +1,7 @@
 {
   "name": "jp-docs-harness",
   "description": "AIが生成する日本語Markdownをtextlintで検査するハーネス",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "author": {
     "name": "tanabe1478",
     "url": "https://github.com/tanabe1478"

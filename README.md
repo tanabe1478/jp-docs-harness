@@ -105,6 +105,7 @@ npx jp-docs-harness lint --review-mode strict docs/design.md
 有効な文書契約から意味レビュー用のreview packetを生成できます。
 
 ```console
+npx jp-docs-harness snapshot docs/design.md
 npx jp-docs-harness prepare docs/design.md > review-packet.json
 ```
 

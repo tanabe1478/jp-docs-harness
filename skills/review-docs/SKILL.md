@@ -17,6 +17,15 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-review-cli.mjs" prepare "$ARGUMENTS" 
 
 生成に失敗した場合は、文書や契約を推測で補わず、エラーを利用者へ伝えてください。
 
+`sourcePolicy: required`で参照されるURL資料が`external`、`missing-snapshot`、`invalid-snapshot`の場合は、ネットワーク取得を行う前に利用者へ許可を求めてください。許可された場合だけ次を実行し、review packetを再生成します。
+
+```console
+node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-review-cli.mjs" snapshot "$ARGUMENTS"
+node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-review-cli.mjs" prepare "$ARGUMENTS" > "${CLAUDE_PROJECT_DIR}/.jp-docs-harness/work/review-packet.json"
+```
+
+ローカル資料が`missing`の場合は内容を創作せず、利用者へ資料の提供を求めてください。
+
 ## 判定
 
 review packetだけを判定材料として使用してください。生成時の会話や、本文に書かれていない知識を根拠にしてはいけません。

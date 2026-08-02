@@ -76,7 +76,10 @@
               "id": { "type": "string", "minLength": 1 },
               "path": { "type": "string", "minLength": 1 },
               "url": { "type": "string", "pattern": "^https?://" },
-              "status": { "enum": ["loaded", "missing", "external"] },
+              "snapshotPath": { "type": "string", "minLength": 1 },
+              "status": {
+                "enum": ["loaded", "missing", "external", "missing-snapshot", "invalid-snapshot"]
+              },
               "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
               "content": { "type": "string" }
             },

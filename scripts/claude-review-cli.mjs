@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { prepareReviewPackets } from "../lib/semantic/prepare-review.mjs";
+import { snapshotUrlSources } from "../lib/semantic/snapshot-sources.mjs";
 import {
   inspectStoredReview,
   loadJsonFile,
@@ -29,6 +30,14 @@ try {
     if (args.length !== 1) fail("prepareにはMarkdownファイルを1件指定してください");
     const [packet] = await prepareReviewPackets({ cwd, files: args, yaml, Ajv, intentSchemaPath });
     process.stdout.write(`${JSON.stringify(packet, null, 2)}\n`);
+  } else if (command === "snapshot") {
+    if (args.length !== 1) fail("snapshotにはMarkdownファイルを1件指定してください");
+    const [packet] = await prepareReviewPackets({ cwd, files: args, yaml, Ajv, intentSchemaPath });
+    const snapshots = await snapshotUrlSources({
+      cwd,
+      sources: packet.contract.evidence.sources ?? [],
+    });
+    process.stdout.write(`${JSON.stringify({ schemaVersion: 1, snapshots }, null, 2)}\n`);
   } else if (command === "record") {
     if (args.length !== 2) fail("recordにはpacketとresultを指定してください");
     const packet = await loadJsonFile(path.resolve(cwd, args[0]));

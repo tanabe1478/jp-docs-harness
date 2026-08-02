@@ -540,7 +540,7 @@ Phase 2の基盤は完了しました。`*.intent.yml`のJSON Schema、YAML検�
 
 ### Phase 3: GroundingとAccountability
 
-状態は進行中です。`record`、`verify`、レビュー結果のJSON Schema、Freshness gate、Semantic result gate、Claude Codeとpiの`review-docs`、ローカル根拠資料のスナップショット、主張単位のGroundingを導入しました。Judge結果を次元別に比較する`eval`と最小コーパスも追加しました。次はコーパスの拡充と、URL資料を再現可能に保存する仕組みです。
+状態は進行中です。`record`、`verify`、レビュー結果のJSON Schema、Freshness gate、Semantic result gate、Claude Codeとpiの`review-docs`、ローカル根拠資料のスナップショット、主張単位のGroundingを導入しました。Judge結果を次元別に比較する`eval`、GroundingとAccountabilityの評価コーパス、URL資料を明示的に取得する再現可能なsnapshotとlockも追加しました。次は実モデルのcandidate結果を継続収集し、モデルとプロンプトの回帰比較を自動化します。
 
 主張と根拠を扱い、AIが修正できる問題と書き手へ返す問題を分けます。
 

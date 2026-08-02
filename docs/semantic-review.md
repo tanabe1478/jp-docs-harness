@@ -163,7 +163,7 @@ review packetの`grounding.sources`には、契約で宣言したローカル資
 | `conflicts` | 根拠資料と矛盾する |
 | `not_applicable` | 外部根拠を必要としない |
 
-`record`は主張の原文が指定された本文行に存在すること、引用先IDが宣言済みであること、根拠行が資料の範囲内であることを検証します。`external`または`missing`の資料は、内容をスナップショット化していないため引用できません。
+`record`は主張の原文が指定された本文行に存在すること、引用先IDが宣言済みであること、根拠行が資料の範囲内であることを検証します。`external`、`missing`、`missing-snapshot`、`invalid-snapshot`の資料は引用できません。Evidence gateは、必須資料がこれらの状態なら意味レビュー前にfindingを生成します。
 
 ## エージェントから実行する
 

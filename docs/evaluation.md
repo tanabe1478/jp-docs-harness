@@ -20,6 +20,22 @@ jp-docs-harness eval eval/cases/grounding-basic/gold.json candidate.json
 
 主張はIDではなく、本文の行範囲と原文で対応付けます。Judge間で連番が異なっても、同じ主張なら比較できます。
 
+## 同梱コーパス
+
+`eval/cases`には次のgoldケースを同梱しています。
+
+| ケース | 検証する失敗 |
+| --- | --- |
+| `grounding-basic` | 根拠と一致する数値主張 |
+| `grounding-conflict` | 根拠資料と矛盾する数値主張 |
+| `author-experience` | AIが確認できない書き手固有の経験 |
+
+コーパス自体の比較処理は次で確認できます。
+
+```console
+npm run eval:corpus
+```
+
 ## コーパスの作り方
 
 各ケースへ次を保存します。

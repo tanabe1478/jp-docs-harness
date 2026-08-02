@@ -1,0 +1,19 @@
+version: 1
+profile: essay
+
+audience:
+  problem: 構成の採用理由が分からない
+
+reader_delta:
+  know:
+    - 構成の採用理由
+  decide: []
+  do: []
+
+requirements:
+  critical:
+    - 構成の採用理由
+
+evidence:
+  author_only:
+    - 実運用で障害対応を経験した事実

@@ -15,12 +15,12 @@ requirements:
     importance: answer-critical
     type: simple-knowledge
     description: p95応答時間
-    fact: 測定環境でp95応答時間が100msだった
+    fact: 測定結果と一致するp95応答時間
     source_ids:
       - benchmark
 
 evidence:
   sources:
     - id: benchmark
-      path: eval/cases/grounding-basic/evidence/benchmark.txt
+      path: eval/cases/grounding-conflict/evidence/benchmark.txt
       description: 固定負荷での測定結果

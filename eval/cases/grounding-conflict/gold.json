@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "document": {
+    "path": "eval/cases/grounding-conflict/document.md",
+    "contentHash": "sha256:57692e1c05aa15d47f60c2bfcaf38a3cd62647e1c269453ed9337e1ddcf9ae90"
+  },
+  "contract": {
+    "path": "eval/cases/grounding-conflict/document.md.intent.yml",
+    "contractHash": "sha256:b2dbc33576f14b4e4ed8d2a79d4f0e3fe081a84447c44c374a373d1e66240ffd"
+  },
+  "rubricHash": "sha256:15b82b4691596d162047d14981069778286219ce073f01d7c2bf6d7168d46526",
+  "evidenceHash": "sha256:f844212a6fd45359be92b4cb5b72e5a659061a3a65f23738e15630fdd8709b20",
+  "judge": {
+    "provider": "human",
+    "model": "gold-label",
+    "promptVersion": "2"
+  },
+  "evaluations": [
+    {
+      "checkId": "p95-latency-fact",
+      "verdict": "contradicts",
+      "resolution": "agent",
+      "justification": "本文は80msだがbenchmarkには120msと記録されている",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "claimIds": [
+        "claim-001"
+      ],
+      "repairableByAgent": true
+    }
+  ],
+  "authorEvaluations": [],
+  "groundingCoverage": {
+    "status": "reviewed",
+    "justification": "性能値の主張を確認した"
+  },
+  "claimEvaluations": [
+    {
+      "claimId": "claim-001",
+      "text": "p95の応答時間は80msでした。",
+      "kind": "factual",
+      "verdict": "conflicts",
+      "resolution": "agent",
+      "justification": "benchmarkの測定値120msと矛盾する",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "evidence": [
+        {
+          "sourceId": "benchmark",
+          "startLine": 3,
+          "endLine": 3
+        }
+      ],
+      "repairableByAgent": true
+    }
+  ]
+}
