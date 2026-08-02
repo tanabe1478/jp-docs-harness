@@ -2,14 +2,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import * as textlint from "textlint";
-import { runTextlint } from "../lib/run-textlint.mjs";
+import { runHarness } from "../lib/run-harness.mjs";
 
 const MARKDOWN_PATTERN = /\.(?:md|markdown)$/i;
 const MAX_FEEDBACK_LENGTH = 10_000;
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export default function textlintOnSettle(pi: ExtensionAPI) {
-	let markdownTouched = false;
+	const touchedMarkdown = new Set<string>();
 	let correctionTurnActive = false;
 	let lintRunning = false;
 
@@ -17,11 +17,11 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 		description: "日本語のMarkdown文書をtextlintで検査し、指摘を修正する",
 		handler: async (_args, ctx) => {
 			const result = await lintProject(ctx.cwd);
-			if (!result.hasMessages) {
+			if (!result.hasFindings) {
 				ctx.ui.notify("textlint: 指摘はありません", "info");
 				return;
 			}
-			pi.sendUserMessage(formatFeedback(result.output));
+			pi.sendUserMessage(formatFeedback(result.humanOutput));
 		},
 	});
 
@@ -30,19 +30,20 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 
 		const input = event.input as { path?: unknown };
 		if (typeof input.path === "string" && MARKDOWN_PATTERN.test(input.path)) {
-			markdownTouched = true;
+			touchedMarkdown.add(input.path);
 		}
 	});
 
 	pi.on("agent_settled", async (_event, ctx) => {
-		if (!markdownTouched || lintRunning) return;
+		if (touchedMarkdown.size === 0 || lintRunning) return;
 
 		lintRunning = true;
-		markdownTouched = false;
+		const files = [...touchedMarkdown];
+		touchedMarkdown.clear();
 
 		try {
-			const result = await lintProject(ctx.cwd);
-			if (!result.hasMessages) {
+			const result = await lintProject(ctx.cwd, files);
+			if (!result.hasFindings) {
 				correctionTurnActive = false;
 				ctx.ui.notify("textlint: 指摘はありません", "info");
 				return;
@@ -58,7 +59,7 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 			pi.sendMessage(
 				{
 					customType: "textlint-feedback",
-					content: formatFeedback(result.output),
+					content: formatFeedback(result.humanOutput),
 					display: true,
 				},
 				{ deliverAs: "followUp", triggerTurn: true },
@@ -74,10 +75,11 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 	});
 }
 
-async function lintProject(cwd: string) {
-	return runTextlint({
+async function lintProject(cwd: string, files: string[] = []) {
+	return runHarness({
 		textlint,
 		cwd,
+		files,
 		configFilePath: path.join(packageRoot, ".textlintrc.json"),
 		nodeModulesDir: path.join(packageRoot, "node_modules"),
 	});

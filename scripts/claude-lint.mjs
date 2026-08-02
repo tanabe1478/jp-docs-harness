@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { runTextlint } from "../lib/run-textlint.mjs";
+import { runHarness } from "../lib/run-harness.mjs";
 
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 const pluginData = process.env.CLAUDE_PLUGIN_DATA;
@@ -16,15 +16,15 @@ try {
   const requireFromData = createRequire(path.join(pluginData, "package.json"));
   const textlintPath = requireFromData.resolve("textlint");
   const textlint = await import(pathToFileURL(textlintPath).href);
-  const result = await runTextlint({
+  const result = await runHarness({
     textlint,
     cwd: projectDir,
     configFilePath: path.join(pluginRoot, ".textlintrc.json"),
     nodeModulesDir: path.join(pluginData, "node_modules"),
   });
 
-  if (result.output) process.stdout.write(`${result.output}\n`);
-  process.exit(result.hasMessages ? 1 : 0);
+  if (result.humanOutput) process.stdout.write(`${result.humanOutput}\n`);
+  process.exit(result.hasFindings ? 1 : 0);
 } catch (error) {
   process.stderr.write(`jp-docs-harness: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(2);

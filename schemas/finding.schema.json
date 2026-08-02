@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tanabe1478/jp-docs-harness/schemas/finding.schema.json",
+  "title": "jp-docs-harness finding",
+  "type": "object",
+  "required": [
+    "id",
+    "gate",
+    "document",
+    "ruleId",
+    "severity",
+    "verdict",
+    "resolution",
+    "message",
+    "location",
+    "repairableByAgent"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "gate": { "type": "string", "minLength": 1 },
+    "document": { "type": "string", "minLength": 1 },
+    "ruleId": { "type": "string", "minLength": 1 },
+    "severity": { "enum": ["error", "warning", "info"] },
+    "verdict": {
+      "enum": ["meets", "partially_meets", "missing", "contradicts", "fail"]
+    },
+    "resolution": { "enum": ["agent", "needs_author", "uncertain", "none"] },
+    "message": { "type": "string", "minLength": 1 },
+    "location": {
+      "type": ["object", "null"],
+      "properties": {
+        "startLine": { "type": "integer", "minimum": 1 },
+        "startColumn": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 },
+        "endColumn": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["startLine", "startColumn", "endLine", "endColumn"],
+      "additionalProperties": false
+    },
+    "repairableByAgent": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

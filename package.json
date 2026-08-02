@@ -1,6 +1,6 @@
 {
   "name": "jp-docs-harness",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AIが生成する日本語ドキュメントの品質を検査するハーネス",
   "type": "module",
   "license": "MIT",
@@ -31,11 +31,13 @@
     "lib/",
     "prompts/",
     "scripts/",
-    "skills/"
+    "skills/",
+    "schemas/"
   ],
   "scripts": {
     "lint": "node ./bin/jp-docs-harness.mjs",
     "lint:fix": "textlint --fix \"**/*.md\"",
+    "test": "node --test",
     "pack:check": "npm pack --dry-run"
   },
   "dependencies": {

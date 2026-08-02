@@ -83,3 +83,15 @@ npmパッケージとして公開した後は、AIエージェントを使わず
 ```console
 npx jp-docs-harness
 ```
+
+特定のMarkdownだけを検査する場合は、ファイルパスを指定します。
+
+```console
+npx jp-docs-harness README.md docs/design.md
+```
+
+他のツールから結果を利用する場合は、共通finding形式のJSONを出力できます。
+
+```console
+npx jp-docs-harness lint --format json README.md
+```

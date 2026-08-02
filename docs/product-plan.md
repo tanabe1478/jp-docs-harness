@@ -496,6 +496,8 @@ jp-docs-harness/
 
 ### Phase 1: 検査基盤の一般化
 
+状態は進行中です。最初の実装単位として、`runHarness`、対象ファイル指定、共通finding形式、本文ハッシュ、JSON出力、Node.js標準テストランナーを導入しました。次の実装単位でContractとFreshnessのゲートインターフェースを追加します。
+
 textlint専用の実行処理を、複数ゲートを扱える`runHarness`へ置き換えます。
 
 実装対象は次の通りです。
