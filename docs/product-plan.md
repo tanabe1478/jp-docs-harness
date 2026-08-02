@@ -496,7 +496,7 @@ jp-docs-harness/
 
 ### Phase 1: 検査基盤の一般化
 
-状態は進行中です。`runHarness`、対象ファイル指定、共通finding形式、本文ハッシュ、JSON出力、Node.js標準テストランナー、Surface gate、Contract gateを導入しました。Phase 1に残っている実装はFreshness gateです。
+Phase 1は完了しました。`runHarness`、対象ファイル指定、共通finding形式、本文ハッシュ、JSON出力、Node.js標準テストランナー、Surface gate、Contract gate、Freshness gateを導入しました。
 
 textlint専用の実行処理を、複数ゲートを扱える`runHarness`へ置き換えます。
 
@@ -518,7 +518,7 @@ textlint専用の実行処理を、複数ゲートを扱える`runHarness`へ置
 
 ### Phase 2: Document ContractとCompleteness
 
-状態は進行中です。`*.intent.yml`のJSON Schema、YAML検証、契約ハッシュ、`manual`、`contracted`、`strict`の実行モード、型付きメタルーブリックのコンパイラ、review packetを導入しました。Phase 2に残っている実装は、現在のエージェントによるチェック判定と結果保存への接続です。この段階では意味に関する自動修正を行いません。
+Phase 2の基盤は完了しました。`*.intent.yml`のJSON Schema、YAML検証、契約ハッシュ、`manual`、`contracted`、`strict`の実行モード、型付きメタルーブリックのコンパイラ、review packet、結果の記録と鮮度確認を導入しました。現在のエージェントによるチェック判定はPhase 3の`review-docs`で接続します。この段階では意味に関する自動修正を行いません。
 
 実装対象は次の通りです。
 
@@ -539,6 +539,8 @@ textlint専用の実行処理を、複数ゲートを扱える`runHarness`へ置
 - 契約または本文の変更後に古い結果を検出できる
 
 ### Phase 3: GroundingとAccountability
+
+状態は進行中です。`record`、`verify`、レビュー結果のJSON Schema、Freshness gateを導入しました。次にSemantic result gateと`review-docs`を追加します。
 
 主張と根拠を扱い、AIが修正できる問題と書き手へ返す問題を分けます。
 

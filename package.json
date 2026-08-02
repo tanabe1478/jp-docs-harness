@@ -1,6 +1,6 @@
 {
   "name": "jp-docs-harness",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "AIが生成する日本語ドキュメントの品質を検査するハーネス",
   "type": "module",
   "license": "MIT",

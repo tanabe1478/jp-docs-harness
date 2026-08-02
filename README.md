@@ -5,7 +5,7 @@ AIが生成しがちな不自然な構造や表現を検出する`@textlint-ja/t
 
 Claude Code Pluginとpi packageの両方として配布できるため、導入先の各プロジェクトへ設定ファイルをコピーする必要はありません。
 
-今後の製品構想とロードマップは、[`docs/product-plan.md`](./docs/product-plan.md)にまとめています。完全性評価へ応用するGAMUT論文の調査結果は、[`docs/research/gamut.md`](./docs/research/gamut.md)にあります。文書契約の形式と検査モードは、[`docs/document-contract.md`](./docs/document-contract.md)を参照してください。
+今後の製品構想とロードマップは、[`docs/product-plan.md`](./docs/product-plan.md)にまとめています。完全性評価へ応用するGAMUT論文の調査結果は、[`docs/research/gamut.md`](./docs/research/gamut.md)にあります。文書契約は[`docs/document-contract.md`](./docs/document-contract.md)、レビュー結果の記録と鮮度確認は[`docs/semantic-review.md`](./docs/semantic-review.md)を参照してください。
 
 ## このリポジトリを開発する
 
@@ -106,4 +106,11 @@ npx jp-docs-harness lint --review-mode strict docs/design.md
 
 ```console
 npx jp-docs-harness prepare docs/design.md > review-packet.json
+```
+
+意味レビューの結果を検証して保存し、本文や契約の変更後に鮮度を確認できます。
+
+```console
+npx jp-docs-harness record review-packet.json review-result.json
+npx jp-docs-harness verify docs/design.md
 ```

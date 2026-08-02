@@ -12,6 +12,10 @@ import { resolveTargetPatterns } from "../lib/core/target-files.mjs";
 import { runHarness } from "../lib/run-harness.mjs";
 import { compileRubric } from "../lib/semantic/compile-rubric.mjs";
 import { prepareReviewPackets } from "../lib/semantic/prepare-review.mjs";
+import {
+  inspectStoredReview,
+  recordReviewResult,
+} from "../lib/semantic/review-result.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 
@@ -256,12 +260,129 @@ evidence:
   }
 });
 
+await test("recordとverifyは完全な結果を保存し本文変更後にstaleを返す", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-review-"));
+  try {
+    await writeFile(path.join(cwd, "guide.md"), "# 導入ガイド\n手順を説明します。\n");
+    await writeFile(
+      path.join(cwd, "guide.md.intent.yml"),
+      `version: 1
+profile: tutorial
+audience:
+  problem: 導入方法が分からない
+reader_delta:
+  know: [必要な手順]
+  decide: [導入の可否]
+  do: [Pluginの導入]
+requirements:
+  critical: [インストール手順]
+evidence:
+  author_only: [採用した理由]
+`,
+    );
+    const prepare = () =>
+      prepareReviewPackets({
+        yaml,
+        Ajv,
+        cwd,
+        files: ["guide.md"],
+        intentSchemaPath: path.join(projectRoot, "schemas", "intent.schema.json"),
+      });
+    const [packet] = await prepare();
+    const result = {
+      schemaVersion: 1,
+      document: { path: packet.document.path, contentHash: packet.document.contentHash },
+      contract: { path: packet.contract.path, contractHash: packet.contract.contractHash },
+      rubricHash: packet.rubric.rubricHash,
+      judge: { provider: "test", model: "test-model", promptVersion: "1" },
+      evaluations: packet.rubric.checks.map((check) => ({
+        checkId: check.id,
+        verdict: "meets",
+        resolution: "none",
+        justification: "本文の2行目で確認できる",
+        location: { startLine: 2, endLine: 2 },
+        repairableByAgent: false,
+      })),
+      authorEvaluations: packet.rubric.authorOnly.map((item) => ({
+        item,
+        status: "missing",
+        justification: "本文に書き手の理由がない",
+        location: null,
+      })),
+    };
+
+    await recordReviewResult({
+      cwd,
+      packet,
+      result,
+      Ajv,
+      reviewPacketSchemaPath: path.join(projectRoot, "schemas", "review-packet.schema.json"),
+      reviewResultSchemaPath: path.join(projectRoot, "schemas", "review-result.schema.json"),
+    });
+    const fresh = await inspectStoredReview({
+      cwd,
+      packet,
+      Ajv,
+      reviewResultSchemaPath: path.join(projectRoot, "schemas", "review-result.schema.json"),
+    });
+    assert.equal(fresh.status, "fresh");
+
+    await writeFile(path.join(cwd, "guide.md"), "# 導入ガイド\n変更した本文です。\n");
+    const [changedPacket] = await prepare();
+    const stale = await inspectStoredReview({
+      cwd,
+      packet: changedPacket,
+      Ajv,
+      reviewResultSchemaPath: path.join(projectRoot, "schemas", "review-result.schema.json"),
+    });
+    assert.equal(stale.status, "stale");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+await test("contracted modeは意味レビューの欠落を報告する", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-contracted-"));
+  try {
+    await writeFile(path.join(cwd, "guide.md"), "# 導入ガイド\n");
+    await writeFile(
+      path.join(cwd, "guide.md.intent.yml"),
+      `version: 1
+profile: tutorial
+audience:
+  problem: 導入方法が分からない
+reader_delta:
+  know: []
+  decide: []
+  do: []
+requirements:
+  critical: [インストール手順]
+`,
+    );
+    const result = await runHarness({
+      textlint,
+      yaml,
+      Ajv,
+      cwd,
+      files: ["guide.md"],
+      reviewMode: "contracted",
+      configFilePath: path.join(projectRoot, ".textlintrc.json"),
+      nodeModulesDir: path.join(projectRoot, "node_modules"),
+    });
+    assert.equal(result.report.findings[0].ruleId, "freshness/missing");
+    assert.equal(result.report.documents[0].review.status, "missing");
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 await test("公開するJSON Schemaは有効なJSONである", async () => {
   for (const file of [
     "finding.schema.json",
     "report.schema.json",
     "intent.schema.json",
     "review-packet.schema.json",
+    "review-result.schema.json",
   ]) {
     const content = await readFile(path.join(projectRoot, "schemas", file), "utf8");
     assert.doesNotThrow(() => JSON.parse(content));

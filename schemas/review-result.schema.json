@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tanabe1478/jp-docs-harness/schemas/review-result.schema.json",
+  "title": "jp-docs-harness semantic review result",
+  "type": "object",
+  "required": ["schemaVersion", "document", "contract", "rubricHash", "judge", "evaluations", "authorEvaluations"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "document": {
+      "type": "object",
+      "required": ["path", "contentHash"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "contract": {
+      "type": "object",
+      "required": ["path", "contractHash"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "contractHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "rubricHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "judge": {
+      "type": "object",
+      "required": ["provider", "model", "promptVersion"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "promptVersion": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "evaluations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evaluation" }
+    },
+    "authorEvaluations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/authorEvaluation" }
+    }
+  },
+  "$defs": {
+    "location": {
+      "type": ["object", "null"],
+      "properties": {
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["startLine", "endLine"],
+      "additionalProperties": false
+    },
+    "evaluation": {
+      "type": "object",
+      "required": ["checkId", "verdict", "resolution", "justification", "location", "repairableByAgent"],
+      "properties": {
+        "checkId": { "type": "string", "minLength": 1 },
+        "verdict": { "enum": ["meets", "partially_meets", "missing", "contradicts"] },
+        "resolution": { "enum": ["agent", "needs_author", "uncertain", "none"] },
+        "justification": { "type": "string", "minLength": 1 },
+        "location": { "$ref": "#/$defs/location" },
+        "repairableByAgent": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "authorEvaluation": {
+      "type": "object",
+      "required": ["item", "status", "justification", "location"],
+      "properties": {
+        "item": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["provided", "missing", "uncertain"] },
+        "justification": { "type": "string", "minLength": 1 },
+        "location": { "$ref": "#/$defs/location" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
