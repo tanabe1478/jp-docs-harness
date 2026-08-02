@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import Ajv from "ajv/dist/2020.js";
 import * as textlint from "textlint";
 import * as yaml from "yaml";
+import { compareReviewResults } from "../lib/eval/compare-review-results.mjs";
 import { runHarness } from "../lib/run-harness.mjs";
 import { prepareReviewPackets } from "../lib/semantic/prepare-review.mjs";
 import {
@@ -60,6 +61,14 @@ try {
     process.exit(0);
   }
 
+  if (options.command === "eval") {
+    if (options.files.length !== 2) throw new Error("evalにはgoldとcandidateのJSONを指定してください");
+    const gold = await loadJsonFile(path.resolve(cwd, options.files[0]));
+    const candidate = await loadJsonFile(path.resolve(cwd, options.files[1]));
+    process.stdout.write(`${JSON.stringify(compareReviewResults(gold, candidate), null, 2)}\n`);
+    process.exit(0);
+  }
+
   if (options.command === "verify") {
     if (options.files.length !== 1) throw new Error("verifyにはMarkdownファイルを1件指定してください");
     const [packet] = await prepareReviewPackets({
@@ -109,7 +118,7 @@ try {
 }
 
 function parseArguments(args) {
-  const knownCommands = new Set(["lint", "prepare", "record", "verify"]);
+  const knownCommands = new Set(["lint", "prepare", "record", "verify", "eval"]);
   const hasCommand = knownCommands.has(args[0]);
   const command = hasCommand ? args[0] : "lint";
   const remaining = hasCommand ? args.slice(1) : [...args];
@@ -154,5 +163,5 @@ function parseArguments(args) {
 }
 
 function printHelp() {
-  process.stdout.write(`jp-docs-harness <command> [options] [files...]\n\nCommands:\n  lint [files...]          決定論的な検査を実行する\n  prepare <file>           意味レビュー用のreview packetを生成する\n  record <packet> <result> レビュー結果を検証して保存する\n  verify <file>            保存済みレビューの鮮度を確認する\n\nOptions:\n  --output <path>                         recordの保存先を指定する\n\nOptions for lint and verify:\n  --format <stylish|json>                 出力形式を指定する\n  --json                                  --format jsonの短縮形\n  --review-mode <manual|contracted|strict> 文書契約の適用方法を指定する\n  -h, --help                              ヘルプを表示する\n`);
+  process.stdout.write(`jp-docs-harness <command> [options] [files...]\n\nCommands:\n  lint [files...]          決定論的な検査を実行する\n  prepare <file>           意味レビュー用のreview packetを生成する\n  record <packet> <result> レビュー結果を検証して保存する\n  verify <file>            保存済みレビューの鮮度を確認する\n  eval <gold> <candidate>  Judge結果を次元別に比較する\n\nOptions:\n  --output <path>                         recordの保存先を指定する\n\nOptions for lint and verify:\n  --format <stylish|json>                 出力形式を指定する\n  --json                                  --format jsonの短縮形\n  --review-mode <manual|contracted|strict> 文書契約の適用方法を指定する\n  -h, --help                              ヘルプを表示する\n`);
 }

@@ -54,9 +54,10 @@
             "properties": {
               "id": { "type": "string", "minLength": 1 },
               "path": { "type": "string", "minLength": 1 },
-              "url": { "type": "string", "pattern": "^https?://" }
+              "url": { "type": "string", "pattern": "^https?://" },
+              "description": { "type": "string", "minLength": 1 }
             },
-            "oneOf": [{ "required": ["path"] }, { "required": ["url"] }],
+            "anyOf": [{ "required": ["path"] }, { "required": ["url"] }],
             "additionalProperties": false
           }
         },
@@ -129,7 +130,13 @@
         },
         "entities": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
         "aspects": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-        "meta_insight": { "type": "string", "minLength": 1 }
+        "meta_insight": { "type": "string", "minLength": 1 },
+        "source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
       },
       "allOf": [
         {

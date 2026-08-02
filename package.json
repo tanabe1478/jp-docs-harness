@@ -1,6 +1,6 @@
 {
   "name": "jp-docs-harness",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "AIが生成する日本語ドキュメントの品質を検査するハーネス",
   "type": "module",
   "license": "MIT",
@@ -26,6 +26,7 @@
     ".textlintrc.json",
     "AGENTS.md",
     "bin/",
+    "eval/",
     "extensions/",
     "hooks/",
     "lib/",
@@ -38,6 +39,7 @@
     "lint": "node ./bin/jp-docs-harness.mjs",
     "lint:fix": "textlint --fix \"**/*.md\"",
     "test": "node --test",
+    "eval:smoke": "node ./bin/jp-docs-harness.mjs eval eval/cases/grounding-basic/gold.json eval/cases/grounding-basic/gold.json",
     "pack:check": "npm pack --dry-run"
   },
   "dependencies": {

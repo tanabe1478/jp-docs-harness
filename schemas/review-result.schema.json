@@ -3,9 +3,9 @@
   "$id": "https://github.com/tanabe1478/jp-docs-harness/schemas/review-result.schema.json",
   "title": "jp-docs-harness semantic review result",
   "type": "object",
-  "required": ["schemaVersion", "document", "contract", "rubricHash", "judge", "evaluations", "authorEvaluations"],
+  "required": ["schemaVersion", "document", "contract", "rubricHash", "evidenceHash", "judge", "evaluations", "authorEvaluations", "groundingCoverage", "claimEvaluations"],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "document": {
       "type": "object",
       "required": ["path", "contentHash"],
@@ -25,6 +25,7 @@
       "additionalProperties": false
     },
     "rubricHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "evidenceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "judge": {
       "type": "object",
       "required": ["provider", "model", "promptVersion"],
@@ -42,6 +43,19 @@
     "authorEvaluations": {
       "type": "array",
       "items": { "$ref": "#/$defs/authorEvaluation" }
+    },
+    "groundingCoverage": {
+      "type": "object",
+      "required": ["status", "justification"],
+      "properties": {
+        "status": { "enum": ["reviewed", "no_verifiable_claims"] },
+        "justification": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "claimEvaluations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/claimEvaluation" }
     }
   },
   "$defs": {
@@ -56,15 +70,52 @@
     },
     "evaluation": {
       "type": "object",
-      "required": ["checkId", "verdict", "resolution", "justification", "location", "repairableByAgent"],
+      "required": ["checkId", "verdict", "resolution", "justification", "location", "claimIds", "repairableByAgent"],
       "properties": {
         "checkId": { "type": "string", "minLength": 1 },
         "verdict": { "enum": ["meets", "partially_meets", "missing", "contradicts"] },
         "resolution": { "enum": ["agent", "needs_author", "uncertain", "none"] },
         "justification": { "type": "string", "minLength": 1 },
         "location": { "$ref": "#/$defs/location" },
+        "claimIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^claim-[0-9]{3,}$" }
+        },
         "repairableByAgent": { "type": "boolean" }
       },
+      "additionalProperties": false
+    },
+    "claimEvidence": {
+      "type": "object",
+      "required": ["sourceId", "startLine", "endLine"],
+      "properties": {
+        "sourceId": { "type": "string", "minLength": 1 },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "claimEvaluation": {
+      "type": "object",
+      "required": ["claimId", "text", "kind", "verdict", "resolution", "justification", "location", "evidence", "repairableByAgent"],
+      "properties": {
+        "claimId": { "type": "string", "pattern": "^claim-[0-9]{3,}$" },
+        "text": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["factual", "recommendation", "author-experience"] },
+        "verdict": { "enum": ["supported", "partially_supported", "unsupported", "conflicts", "not_applicable"] },
+        "resolution": { "enum": ["agent", "needs_author", "uncertain", "none"] },
+        "justification": { "type": "string", "minLength": 1 },
+        "location": { "$ref": "#/$defs/location" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/claimEvidence" } },
+        "repairableByAgent": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "verdict": { "enum": ["supported", "partially_supported", "conflicts"] } }, "required": ["verdict"] },
+          "then": { "properties": { "evidence": { "minItems": 1 } } }
+        }
+      ],
       "additionalProperties": false
     },
     "authorEvaluation": {

@@ -1,0 +1,26 @@
+version: 1
+profile: technical-explainer
+
+audience:
+  problem: 応答性能が分からない
+
+reader_delta:
+  know:
+    - 測定環境でのp95応答時間
+  decide: []
+  do: []
+
+requirements:
+  - id: p95-latency
+    importance: answer-critical
+    type: simple-knowledge
+    description: p95応答時間
+    fact: 測定環境でp95応答時間が100msだった
+    source_ids:
+      - benchmark
+
+evidence:
+  sources:
+    - id: benchmark
+      path: evidence/benchmark.txt
+      description: 固定負荷での測定結果

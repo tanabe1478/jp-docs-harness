@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "document": {
+    "path": "document.md",
+    "contentHash": "sha256:7d377a4a02b9dab440dd505e3aa603bad211c5defe502be609a42e5f83491594"
+  },
+  "contract": {
+    "path": "document.md.intent.yml",
+    "contractHash": "sha256:be4a3ae9f0579d57571868c88039984a3c72a51021026827d04d571e6cd10432"
+  },
+  "rubricHash": "sha256:b8d91f403620d480744c2b932a0c34855f1032cf137a0935ed2ebb6637d84478",
+  "evidenceHash": "sha256:3887f8fc71f82e0ee14ab10d70d0f696d94b3ab4d04d12c3980263e95a39b2bd",
+  "judge": {
+    "provider": "human",
+    "model": "gold-label",
+    "promptVersion": "2"
+  },
+  "evaluations": [
+    {
+      "checkId": "p95-latency-fact",
+      "verdict": "meets",
+      "resolution": "none",
+      "justification": "本文3行目にp95応答時間が明記され、benchmarkの3行目と一致する",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "claimIds": [
+        "claim-001"
+      ],
+      "repairableByAgent": false
+    }
+  ],
+  "authorEvaluations": [],
+  "groundingCoverage": {
+    "status": "reviewed",
+    "justification": "性能に関する検証可能な主張を確認した"
+  },
+  "claimEvaluations": [
+    {
+      "claimId": "claim-001",
+      "text": "測定環境では、p95の応答時間は100msでした。",
+      "kind": "factual",
+      "verdict": "supported",
+      "resolution": "none",
+      "justification": "benchmarkの3行目にp95応答時間100msと記録されている",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "evidence": [
+        {
+          "sourceId": "benchmark",
+          "startLine": 3,
+          "endLine": 3
+        }
+      ],
+      "repairableByAgent": false
+    }
+  ]
+}

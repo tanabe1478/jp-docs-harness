@@ -116,10 +116,11 @@ function reviewInstructions(target: string, cli: string): string {
 
 1. \`mkdir -p .jp-docs-harness/work\`を実行する
 2. \`node ${JSON.stringify(cli)} prepare ${JSON.stringify(target)} > .jp-docs-harness/work/review-packet.json\`を実行する
-3. review packetだけを根拠として、すべてのchecksとauthorOnlyを独立して判定する
-4. ${resultSchema}の形式で.jp-docs-harness/work/review-result.jsonへ保存する
-5. \`node ${JSON.stringify(cli)} record .jp-docs-harness/work/review-packet.json .jp-docs-harness/work/review-result.json\`を実行する
-6. \`node ${JSON.stringify(cli)} verify ${JSON.stringify(target)}\`を実行する
+3. review packetだけを根拠として、すべてのchecks、authorOnly、本文中の検証可能な主張を独立して判定する
+4. 主張は原文と行番号を記録し、status: loadedの資料だけを行番号付きで引用する。sourcePolicy: requiredの判定はclaimIdsから全sourceIdsの引用へ接続する。書き手固有の経験に根拠がなければneeds_authorにする
+5. ${resultSchema}の形式で.jp-docs-harness/work/review-result.jsonへ保存する。rubricHashとevidenceHashはpacketからコピーし、promptVersionは2にする
+6. \`node ${JSON.stringify(cli)} record .jp-docs-harness/work/review-packet.json .jp-docs-harness/work/review-result.json\`を実行する
+7. \`node ${JSON.stringify(cli)} verify ${JSON.stringify(target)}\`を実行する
 
 missing、contradicts、partially_meetsには本文の根拠行と理由を付けてください。needs_authorを推測で解決しないでください。agentが修正可能な指摘だけを一度修正できます。修正した場合はreview packetの生成から記録までを一度だけやり直し、問題が残れば利用者へ返してください。`;
 }

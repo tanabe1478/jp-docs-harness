@@ -32,7 +32,9 @@ review packetだけを判定材料として使用してください。生成時�
 
 `rubric.authorOnly`も全件評価してください。本文と許可された根拠に情報がなければ`missing`とし、推測で`provided`にしてはいけません。
 
-結果を[`schemas/review-result.schema.json`](${CLAUDE_PLUGIN_ROOT}/schemas/review-result.schema.json)に適合するJSONとして、`${CLAUDE_PROJECT_DIR}/.jp-docs-harness/work/review-result.json`へ保存してください。`document`、`contract`、`rubricHash`はreview packetからそのままコピーします。`judge`には現在のproviderとmodelが分かる場合は記録し、分からない場合は`current-agent`とします。`promptVersion`は`1`です。
+本文中の外部検証可能な事実、推奨、書き手固有の経験を主張単位で抽出し、`claimEvaluations`へ記録してください。検証可能な主張を確認した場合は`groundingCoverage.status`を`reviewed`にします。該当する主張が本当にない場合だけ`no_verifiable_claims`とし、理由を書きます。本文の主張は`text`へ原文のままコピーし、`location`を付けます。`grounding.sources`のうち`status: loaded`の資料だけを根拠として引用でき、引用には資料の行範囲が必要です。根拠がない主張は`unsupported`、一部だけ裏付けられる場合は`partially_supported`、資料と矛盾する場合は`conflicts`です。URLだけの資料や欠落した資料を読んだことにしてはいけません。`sourcePolicy: required`のチェックを`meets`、`partially_meets`、`contradicts`にする場合は、そのチェックの`claimIds`から指定された全`sourceIds`の引用へ到達できるようにしてください。根拠不要または`missing`のチェックでは`claimIds`を空配列にできます。書き手固有の経験を裏付けられない場合は`needs_author`とし、AIによる修正を不可にしてください。
+
+結果を[`schemas/review-result.schema.json`](${CLAUDE_PLUGIN_ROOT}/schemas/review-result.schema.json)に適合するJSONとして、`${CLAUDE_PROJECT_DIR}/.jp-docs-harness/work/review-result.json`へ保存してください。`document`、`contract`、`rubricHash`、`evidenceHash`はreview packetからそのままコピーします。`judge`には現在のproviderとmodelが分かる場合は記録し、分からない場合は`current-agent`とします。`promptVersion`は`2`です。
 
 ## 記録と確認
 

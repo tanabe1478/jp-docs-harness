@@ -7,6 +7,7 @@ import Ajv from "ajv/dist/2020.js";
 import * as textlint from "textlint";
 import * as yaml from "yaml";
 import { hashContent } from "../lib/core/content-hash.mjs";
+import { compareReviewResults } from "../lib/eval/compare-review-results.mjs";
 import { createSurfaceFinding } from "../lib/core/finding.mjs";
 import { resolveTargetPatterns } from "../lib/core/target-files.mjs";
 import { runHarness } from "../lib/run-harness.mjs";
@@ -290,17 +291,19 @@ evidence:
       });
     const [packet] = await prepare();
     const result = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       document: { path: packet.document.path, contentHash: packet.document.contentHash },
       contract: { path: packet.contract.path, contractHash: packet.contract.contractHash },
       rubricHash: packet.rubric.rubricHash,
-      judge: { provider: "test", model: "test-model", promptVersion: "1" },
+      evidenceHash: packet.grounding.evidenceHash,
+      judge: { provider: "test", model: "test-model", promptVersion: "2" },
       evaluations: packet.rubric.checks.map((check, index) => ({
         checkId: check.id,
         verdict: index === 0 ? "missing" : "meets",
         resolution: index === 0 ? "agent" : "none",
         justification: index === 0 ? "必要な手順が不足している" : "本文の2行目で確認できる",
         location: index === 0 ? null : { startLine: 2, endLine: 2 },
+        claimIds: [],
         repairableByAgent: index === 0,
       })),
       authorEvaluations: packet.rubric.authorOnly.map((item) => ({
@@ -309,6 +312,11 @@ evidence:
         justification: "本文に書き手の理由がない",
         location: null,
       })),
+      groundingCoverage: {
+        status: "no_verifiable_claims",
+        justification: "外部検証可能な主張はない",
+      },
+      claimEvaluations: [],
     };
 
     await recordReviewResult({
@@ -357,6 +365,117 @@ evidence:
   }
 });
 
+await test("Groundingはローカル根拠を検証し資料変更後にstaleを返す", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-grounding-"));
+  try {
+    await writeFile(path.join(cwd, "result.txt"), "測定結果: 処理時間は10ms\n");
+    await writeFile(path.join(cwd, "performance.md"), "# 性能\n処理時間は10msです。\n");
+    await writeFile(
+      path.join(cwd, "performance.md.intent.yml"),
+      `version: 1
+profile: technical-explainer
+audience:
+  problem: 性能が分からない
+reader_delta:
+  know: [処理時間]
+  decide: []
+  do: []
+requirements:
+  - id: latency
+    importance: answer-critical
+    type: simple-knowledge
+    description: 処理時間
+    fact: 処理時間は10ms
+    source_ids: [benchmark]
+evidence:
+  sources:
+    - id: benchmark
+      path: result.txt
+`,
+    );
+    const prepare = () =>
+      prepareReviewPackets({
+        yaml,
+        Ajv,
+        cwd,
+        files: ["performance.md"],
+        intentSchemaPath: path.join(projectRoot, "schemas", "intent.schema.json"),
+      });
+    const [packet] = await prepare();
+    assert.equal(packet.grounding.sources[0].status, "loaded");
+    assert.equal(packet.rubric.checks[0].sourcePolicy, "required");
+    const result = {
+      schemaVersion: 2,
+      document: { path: packet.document.path, contentHash: packet.document.contentHash },
+      contract: { path: packet.contract.path, contractHash: packet.contract.contractHash },
+      rubricHash: packet.rubric.rubricHash,
+      evidenceHash: packet.grounding.evidenceHash,
+      judge: { provider: "test", model: "test-model", promptVersion: "2" },
+      evaluations: packet.rubric.checks.map((check) => ({
+        checkId: check.id,
+        verdict: "meets",
+        resolution: "none",
+        justification: "根拠資料と一致する",
+        location: { startLine: 2, endLine: 2 },
+        claimIds: ["claim-001"],
+        repairableByAgent: false,
+      })),
+      authorEvaluations: [],
+      groundingCoverage: {
+        status: "reviewed",
+        justification: "性能に関する主張を確認した",
+      },
+      claimEvaluations: [
+        {
+          claimId: "claim-001",
+          text: "処理時間は10msです。",
+          kind: "factual",
+          verdict: "supported",
+          resolution: "none",
+          justification: "benchmarkの1行目に測定結果がある",
+          location: { startLine: 2, endLine: 2 },
+          evidence: [{ sourceId: "benchmark", startLine: 1, endLine: 1 }],
+          repairableByAgent: false,
+        },
+      ],
+    };
+    const unlinked = structuredClone(result);
+    unlinked.evaluations[0].claimIds = [];
+    await assert.rejects(
+      recordReviewResult({
+        cwd,
+        packet,
+        result: unlinked,
+        Ajv,
+        reviewPacketSchemaPath: path.join(projectRoot, "schemas", "review-packet.schema.json"),
+        reviewResultSchemaPath: path.join(projectRoot, "schemas", "review-result.schema.json"),
+      }),
+      /根拠必須の判定にclaimIdsがありません/,
+    );
+    await recordReviewResult({
+      cwd,
+      packet,
+      result,
+      Ajv,
+      reviewPacketSchemaPath: path.join(projectRoot, "schemas", "review-packet.schema.json"),
+      reviewResultSchemaPath: path.join(projectRoot, "schemas", "review-result.schema.json"),
+    });
+
+    await writeFile(path.join(cwd, "result.txt"), "測定結果: 処理時間は20ms\n");
+    const [changedPacket] = await prepare();
+    const stale = await inspectStoredReview({
+      cwd,
+      packet: changedPacket,
+      Ajv,
+      reviewResultSchemaPath: path.join(projectRoot, "schemas", "review-result.schema.json"),
+    });
+    assert.equal(stale.status, "stale");
+    assert.ok(stale.reasons.some((reason) => reason.includes("evidenceHash")));
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 await test("contracted modeは意味レビューの欠落を報告する", async () => {
   const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-contracted-"));
   try {
@@ -390,6 +509,33 @@ requirements:
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
+});
+
+await test("evalはJudge結果を単一スコアにせず次元別に比較する", () => {
+  const base = {
+    evaluations: [
+      { checkId: "check-1", verdict: "meets", resolution: "none" },
+      { checkId: "check-2", verdict: "missing", resolution: "agent" },
+    ],
+    authorEvaluations: [{ item: "採用理由", status: "missing" }],
+    groundingCoverage: { status: "reviewed" },
+    claimEvaluations: [
+      {
+        claimId: "claim-001",
+        text: "処理時間は10msです。",
+        location: { startLine: 2, endLine: 2 },
+        verdict: "supported",
+        resolution: "none",
+      },
+    ],
+  };
+  const candidate = structuredClone(base);
+  candidate.evaluations[1].verdict = "partially_meets";
+  candidate.claimEvaluations[0].verdict = "unsupported";
+  const report = compareReviewResults(base, candidate);
+  assert.equal(report.dimensions.rubricVerdict.accuracy, 0.5);
+  assert.equal(report.dimensions.groundingVerdict.accuracy, 0);
+  assert.equal("score" in report, false);
 });
 
 await test("公開するJSON Schemaは有効なJSONである", async () => {

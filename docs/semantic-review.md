@@ -1,5 +1,7 @@
 # 意味レビューの記録と検証
 
+review packetとreview resultの現在の`schemaVersion`は`2`です。Version 1の保存結果はGrounding情報を持たないため、prepareとレビューをやり直してください。
+
 ## 処理の流れ
 
 意味レビューは、生成、判定、記録、鮮度確認を分けて実行します。
@@ -24,7 +26,7 @@ review packetの`rubric.checks`に、独立して判定するチェックが入�
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "document": {
     "path": "docs/design.md",
     "contentHash": "sha256:..."
@@ -34,6 +36,7 @@ review packetの`rubric.checks`に、独立して判定するチェックが入�
     "contractHash": "sha256:..."
   },
   "rubricHash": "sha256:...",
+  "evidenceHash": "sha256:...",
   "judge": {
     "provider": "anthropic",
     "model": "claude-sonnet",
@@ -44,11 +47,12 @@ review packetの`rubric.checks`に、独立して判定するチェックが入�
       "checkId": "critical-001-fact",
       "verdict": "meets",
       "resolution": "none",
-      "justification": "インストール方法が本文の12行目から18行目にある",
+      "justification": "p95の応答時間が本文の20行目にあり、測定結果と一致する",
       "location": {
-        "startLine": 12,
-        "endLine": 18
+        "startLine": 20,
+        "endLine": 20
       },
+      "claimIds": ["claim-001"],
       "repairableByAgent": false
     }
   ],
@@ -58,6 +62,25 @@ review packetの`rubric.checks`に、独立して判定するチェックが入�
       "status": "missing",
       "justification": "本文と指定資料に書き手の動機がない",
       "location": null
+    }
+  ],
+  "groundingCoverage": {
+    "status": "reviewed",
+    "justification": "性能に関する検証可能な主張を確認した"
+  },
+  "claimEvaluations": [
+    {
+      "claimId": "claim-001",
+      "text": "p95の応答時間は100msです。",
+      "kind": "factual",
+      "verdict": "supported",
+      "resolution": "none",
+      "justification": "測定結果と一致する",
+      "location": { "startLine": 20, "endLine": 20 },
+      "evidence": [
+        { "sourceId": "benchmark", "startLine": 4, "endLine": 4 }
+      ],
+      "repairableByAgent": false
     }
   ]
 }
@@ -90,7 +113,7 @@ jp-docs-harness record review-packet.json review-result.json
 
 - review packetと本文パスまたはハッシュが一致しない
 - 文書契約のパスまたはハッシュが一致しない
-- コンパイル済みルーブリックのハッシュが一致しない
+- コンパイル済みルーブリックまたは根拠資料のハッシュが一致しない
 - 必要なcheck IDが不足している
 - 未知または重複したcheck IDがある
 - `author_only`の評価が不足している
@@ -128,6 +151,20 @@ jp-docs-harness lint --review-mode contracted docs/design.md
 
 `manual`モードでは保存結果がなくても失敗しません。保存結果が存在するものの古い場合は警告します。
 
+## Grounding
+
+review packetの`grounding.sources`には、契約で宣言したローカル資料の内容、ハッシュ、状態が入ります。Judgeは本文から外部検証可能な事実、推奨、書き手固有の経験を抽出し、`claimEvaluations`へ記録します。
+
+| 判定 | 意味 |
+| --- | --- |
+| `supported` | ローカルスナップショットに主張を支える記述がある |
+| `partially_supported` | 主張の一部だけを根拠で確認できる |
+| `unsupported` | 利用可能な根拠では確認できない |
+| `conflicts` | 根拠資料と矛盾する |
+| `not_applicable` | 外部根拠を必要としない |
+
+`record`は主張の原文が指定された本文行に存在すること、引用先IDが宣言済みであること、根拠行が資料の範囲内であることを検証します。`external`または`missing`の資料は、内容をスナップショット化していないため引用できません。
+
 ## エージェントから実行する
 
 Claude Code Pluginでは、名前空間付きSkillを使用します。
@@ -153,5 +190,7 @@ pi packageでは、次のコマンドを使用します。
 - Valuableの問題はwarning
 - Contextの問題はinfo
 - author-onlyの`missing`は`needs_author`のerror
+- 根拠と矛盾する主張はerror
+- 根拠のない書き手固有の経験は`needs_author`のerror
 
 これにより、Surface、Contract、Freshness、Semanticの結果を同じJSONレポートで扱えます。

@@ -88,6 +88,32 @@ requirements:
 
 型付き要件は、固定規則で自己完結したチェックへ変換されます。Strict Listは項目ごとのチェック、Flexible Listは最低網羅率と追加項目のチェック、Processは各手順の存在と順序のチェックへ変換されます。
 
+## 根拠資料と要件を結び付ける
+
+`evidence.sources`へ根拠資料を宣言し、型付き要件の`source_ids`から参照できます。
+
+```yaml
+evidence:
+  sources:
+    - id: benchmark
+      path: evidence/benchmark.txt
+      description: リリース前の測定結果
+    - id: public-spec
+      url: https://example.com/spec
+
+requirements:
+  - id: latency
+    importance: answer-critical
+    type: simple-knowledge
+    description: 応答性能
+    fact: p95の応答時間は100ms以下
+    source_ids: [benchmark]
+```
+
+ローカルの`path`はプロジェクト内だけを指定できます。`prepare`は1 MiB以下の資料をreview packetへ読み込み、内容のハッシュを`evidenceHash`へ反映します。資料を変更すると保存済みレビューは`stale`になります。
+
+URLは参照先として記録しますが、決定論的なprepare処理では取得しません。URLの内容を根拠に使う場合は、取得時点を管理したローカルスナップショットを`path`でも指定してください。
+
 ## 検査モード
 
 `--review-mode`で契約の適用方法を指定します。
@@ -102,7 +128,7 @@ requirements:
 npx jp-docs-harness lint --review-mode strict docs/design.md
 ```
 
-`contracted`は、意味検査を実装した後に、契約がある文書だけを自動レビューするモードになります。現時点では`manual`と同じ契約検証を行います。
+`contracted`と`strict`では、有効な文書契約がある文書に現在の本文、契約、ルーブリック、根拠資料と一致する意味レビュー結果を要求します。
 
 ## Review packetを生成する
 
