@@ -1,6 +1,6 @@
 {
   "name": "jp-docs-harness",
-  "description": "AIが生成する日本語Markdownをtextlintで検査するハーネス",
+  "description": "日本語Markdownの表現、目的適合性、根拠、書き手の入力を検査するハーネス",
   "version": "0.10.1",
   "author": {
     "name": "tanabe1478",
