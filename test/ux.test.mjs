@@ -10,14 +10,28 @@ import {
   hasBlockingFindings,
 } from "../lib/core/human-report.mjs";
 
-await test("formatHarnessReportは成功時にも検査結果を表示する", () => {
+await test("formatHarnessReportは成功時にも検査結果と意味レビュー状態を表示する", () => {
   const output = formatHarnessReport({
     documents: [{ path: "README.md" }],
     findings: [],
     summary: { documents: 1, findings: 0, errors: 0, warnings: 0, infos: 0 },
   });
 
-  assert.equal(output, "Markdown 1件を検査しました。問題はありません。");
+  assert.equal(
+    output,
+    "Markdown 1件を検査しました。問題はありません。\n意味レビュー: 未実行 1件（重要文書にはreview-docsを使用）",
+  );
+});
+
+await test("formatHarnessReportは最新の意味レビューを区別する", () => {
+  const output = formatHarnessReport({
+    documents: [{ path: "README.md", review: { status: "fresh" } }],
+    findings: [],
+    summary: { documents: 1, findings: 0, errors: 0, warnings: 0, infos: 0 },
+  });
+
+  assert.match(output, /意味レビュー: 最新 1件/);
+  assert.doesNotMatch(output, /review-docsを使用/);
 });
 
 await test("formatHarnessReportは重要度と解決主体をまとめる", () => {
