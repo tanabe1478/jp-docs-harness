@@ -13,14 +13,33 @@ const MAX_FEEDBACK_LENGTH = 10_000;
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export default function textlintOnSettle(pi: ExtensionAPI) {
-	pi.registerCommand("lint-docs", {
-		description: "日本語のMarkdown文書をtextlintで検査し、指摘を修正する",
+	pi.registerCommand("check-docs", {
+		description: "Gitリポジトリまたは日本語Markdownを検査する",
 		handler: async (args, ctx) => {
 			try {
-				const scope = resolveLintScope(ctx.cwd, args.trim());
+				const scope = await resolveCheckScope(ctx, args.trim());
+				if (!scope) return;
 				const result = await lintProject(scope.cwd, scope.files);
 				if (!result.hasFindings) {
-					ctx.ui.notify("textlint: 指摘はありません", "info");
+					ctx.ui.notify(result.humanOutput, "info");
+					return;
+				}
+				pi.sendUserMessage(formatFeedback(result.humanOutput));
+			} catch (error) {
+				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
+			}
+		},
+	});
+
+	pi.registerCommand("lint-docs", {
+		description: "check-docsの互換名",
+		handler: async (args, ctx) => {
+			try {
+				const scope = await resolveCheckScope(ctx, args.trim());
+				if (!scope) return;
+				const result = await lintProject(scope.cwd, scope.files);
+				if (!result.hasFindings) {
+					ctx.ui.notify(result.humanOutput, "info");
 					return;
 				}
 				pi.sendUserMessage(formatFeedback(result.humanOutput));
@@ -50,23 +69,39 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("review-docs", {
-		description: "文書契約に基づいてMarkdownの完全性と根拠を検査する",
+		description: "Markdownの目的、完全性、根拠を意味レビューする",
 		handler: async (args, ctx) => {
-			const target = args.trim();
-			if (!target || !MARKDOWN_PATTERN.test(target)) {
-				ctx.ui.notify("使用方法: /review-docs <Markdownファイル>", "warning");
-				return;
+			try {
+				let target = args.trim();
+				if (!target) {
+					target = (await ctx.ui.input("レビュー対象", "Markdownファイルのパス"))?.trim() ?? "";
+				}
+				if (!target) return;
+				const scope = resolveLintScope(ctx.cwd, target);
+				if (scope.files.length !== 1) {
+					ctx.ui.notify("意味レビューにはMarkdownファイルを一件指定してください", "warning");
+					return;
+				}
+				const cli = path.join(packageRoot, "bin", "jp-docs-harness.mjs");
+				pi.sendUserMessage(reviewInstructions(scope.files[0], cli, scope.cwd));
+			} catch (error) {
+				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
 			}
-			const absoluteTarget = path.resolve(ctx.cwd, target);
-			const relativeTarget = path.relative(ctx.cwd, absoluteTarget);
-			if (relativeTarget === ".." || relativeTarget.startsWith(`..${path.sep}`)) {
-				ctx.ui.notify("プロジェクト外の文書はレビューできません", "error");
-				return;
-			}
-			const cli = path.join(packageRoot, "bin", "jp-docs-harness.mjs");
-			pi.sendUserMessage(reviewInstructions(relativeTarget, cli));
 		},
 	});
+}
+
+async function resolveCheckScope(ctx: any, target: string) {
+	if (target) return resolveLintScope(ctx.cwd, target);
+	try {
+		return resolveLintScope(ctx.cwd, "");
+	} catch {
+		const selected = (await ctx.ui.input(
+			"検査対象",
+			"GitリポジトリまたはMarkdownファイルのパス",
+		))?.trim();
+		return selected ? resolveLintScope(ctx.cwd, selected) : null;
+	}
 }
 
 async function lintProject(cwd: string, files: string[]) {
@@ -99,7 +134,7 @@ function resolveLintScope(projectDir: string, target: string): { cwd: string; fi
 			}).trim(),
 		);
 	} catch {
-		throw new Error("Gitリポジトリを特定できません。/lint-docsに対象リポジトリを指定してください");
+		throw new Error("Gitリポジトリを特定できません。検査対象を指定してください");
 	}
 
 	if (targetIsDirectory) return { cwd: repositoryRoot, files: [] };
@@ -126,28 +161,31 @@ function evalInstructions(output: string, cli: string): string {
 Grounding、Accountability、解決主体を別々に評価してください。複数次元を平均した総合スコアや合否は作らないでください。`;
 }
 
-function reviewInstructions(target: string, cli: string): string {
+function reviewInstructions(target: string, cli: string, repositoryRoot: string): string {
 	const resultSchema = path.resolve(path.dirname(cli), "..", "schemas", "review-result.schema.json");
-	return `文書契約に基づいて ${target} を意味レビューしてください。
+	const root = JSON.stringify(repositoryRoot);
+	return `${target}を意味レビューしてください。作業対象のGitリポジトリは${repositoryRoot}です。
 
-次の手順を守ってください。
+最初に対象本文を読み、文書契約${target}.intent.ymlが存在するか確認してください。契約がなければ、本文と現在の利用者の依頼から、想定読者、読後に得てほしい理解・判断・行動、欠かせない内容を抽出し、最小の文書契約を作成してください。目的を合理的に特定できる場合は確認を挟まず進め、結果の冒頭で採用した前提を短く示してください。目的によって評価が大きく変わる場合だけ、利用者へ一つの簡潔な質問をしてください。書き手の経験や動機を推測してauthor_onlyへ追加してはいけません。
 
-1. \`mkdir -p .jp-docs-harness/work\`を実行する
-2. \`node ${JSON.stringify(cli)} prepare ${JSON.stringify(target)} > .jp-docs-harness/work/review-packet.json\`を実行する
-3. 必須のURL資料にsnapshotがなければ、ネットワーク取得前に利用者へ許可を求める。許可された場合だけ\`node ${JSON.stringify(cli)} snapshot ${JSON.stringify(target)}\`を実行してpacketを再生成する
+契約を用意した後は、次の手順を守ってください。
+
+1. \`cd ${root} && mkdir -p .jp-docs-harness/work\`を実行する
+2. \`cd ${root} && node ${JSON.stringify(cli)} prepare ${JSON.stringify(target)} > .jp-docs-harness/work/review-packet.json\`を実行する
+3. 必須のURL資料にsnapshotがなければ、ネットワーク取得前に利用者へ許可を求める。許可された場合だけ\`cd ${root} && node ${JSON.stringify(cli)} snapshot ${JSON.stringify(target)}\`を実行してpacketを再生成する
 4. review packetだけを根拠として、すべてのchecks、authorOnly、本文中の検証可能な主張を独立して判定する
 5. 主張は原文と行番号を記録し、status: loadedの資料だけを行番号付きで引用する。sourcePolicy: requiredの判定はclaimIdsから全sourceIdsの引用へ接続する。書き手固有の経験に根拠がなければneeds_authorにする
-6. ${resultSchema}の形式で.jp-docs-harness/work/review-result.jsonへ保存する。rubricHashとevidenceHashはpacketからコピーし、promptVersionは2にする
-7. \`node ${JSON.stringify(cli)} record .jp-docs-harness/work/review-packet.json .jp-docs-harness/work/review-result.json\`を実行する
-8. \`node ${JSON.stringify(cli)} verify ${JSON.stringify(target)}\`を実行する
+6. ${resultSchema}の形式で${repositoryRoot}/.jp-docs-harness/work/review-result.jsonへ保存する。rubricHashとevidenceHashはpacketからコピーし、promptVersionは2にする
+7. \`cd ${root} && node ${JSON.stringify(cli)} record .jp-docs-harness/work/review-packet.json .jp-docs-harness/work/review-result.json\`を実行する
+8. \`cd ${root} && node ${JSON.stringify(cli)} verify ${JSON.stringify(target)}\`を実行する
 
 missing、contradicts、partially_meetsには本文の根拠行と理由を付けてください。needs_authorを推測で解決しないでください。agentが修正可能な指摘だけを一度修正できます。修正した場合はreview packetの生成から記録までを一度だけやり直し、問題が残れば利用者へ返してください。`;
 }
 
 function formatFeedback(output: string): string {
-	const header = "Markdownにtextlintの指摘があります。文意を保って修正し、再検査してください。\n\n";
+	const header = "Markdownの検査結果です。AIで安全に修正できる指摘だけを直し、書き手の入力が必要なものは質問してください。\n\n";
 	const available = MAX_FEEDBACK_LENGTH - header.length;
 	if (output.length <= available) return header + output;
 
-	return `${header}${output.slice(0, available)}\n\n出力を省略しました。/lint-docsで残りを確認してください。`;
+	return `${header}${output.slice(0, available)}\n\n出力を省略しました。/check-docsで残りを確認してください。`;
 }
