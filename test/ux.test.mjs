@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { resolveDocumentScope } from "../lib/core/document-scope.mjs";
 import {
   formatHarnessReport,
   hasBlockingFindings,
@@ -65,4 +70,48 @@ await test("警告だけのレポートはブロックしない", () => {
     findings: [{ severity: "warning" }],
   };
   assert.equal(hasBlockingFindings(report), false);
+});
+
+await test("GitリポジトリとMarkdownの対象を安全に解決する", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "jp-docs-harness-scope-"));
+  const repository = path.join(workspace, "project");
+  const document = path.join(repository, "docs", "design.md");
+
+  try {
+    await mkdir(path.dirname(document), { recursive: true });
+    await writeFile(document, "# Design\n", "utf8");
+    await writeFile(path.join(repository, "src.ts"), "export {};\n", "utf8");
+    execFileSync("git", ["init", repository], { stdio: "ignore" });
+
+    assert.deepEqual(resolveDocumentScope({ projectDir: workspace, target: "project" }), {
+      cwd: repository,
+      files: [],
+    });
+    assert.deepEqual(
+      resolveDocumentScope({ projectDir: workspace, target: "project/docs/design.md" }),
+      {
+        cwd: repository,
+        files: ["docs/design.md"],
+      },
+    );
+    assert.deepEqual(resolveDocumentScope({ projectDir: path.join(repository, "docs") }), {
+      cwd: repository,
+      files: [],
+    });
+
+    assert.throws(
+      () => resolveDocumentScope({ projectDir: repository, target: "../outside.md" }),
+      /プロジェクト外/,
+    );
+    assert.throws(
+      () => resolveDocumentScope({ projectDir: repository, target: "src.ts" }),
+      /MarkdownファイルまたはGitリポジトリ/,
+    );
+    assert.throws(
+      () => resolveDocumentScope({ projectDir: workspace }),
+      /Gitリポジトリを特定できません/,
+    );
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
 });
