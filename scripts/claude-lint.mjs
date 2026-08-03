@@ -34,8 +34,8 @@ try {
     nodeModulesDir: path.join(pluginData, "node_modules"),
   });
 
-  if (result.humanOutput) process.stdout.write(`${result.humanOutput}\n`);
-  process.exit(result.hasFindings ? 1 : 0);
+  process.stdout.write(`${result.humanOutput}\n`);
+  process.exit(result.hasErrors ? 1 : 0);
 } catch (error) {
   process.stderr.write(`jp-docs-harness: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(2);
@@ -44,7 +44,7 @@ try {
 function parseTarget(args) {
   if (args.length === 0) return "";
   if (args.length === 2 && args[0] === "--target") return args[1];
-  throw new Error("lint-docsにはリポジトリまたはMarkdownを1件だけ指定してください");
+  throw new Error("check-docsにはGitリポジトリまたはMarkdownを1件だけ指定してください");
 }
 
 function resolveScope(projectDir, target) {
@@ -63,7 +63,7 @@ function resolveScope(projectDir, target) {
       execFileSync("git", ["-C", gitStart, "rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim(),
     );
   } catch {
-    throw new Error("Gitリポジトリを特定できません。lint-docsに対象リポジトリを指定してください");
+    throw new Error("Gitリポジトリを特定できません。check-docsに対象リポジトリを指定してください");
   }
 
   if (targetIsDirectory) return { cwd: repositoryRoot, files: [] };
