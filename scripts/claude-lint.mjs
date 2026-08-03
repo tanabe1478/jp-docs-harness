@@ -6,6 +6,7 @@ import { runHarness } from "../lib/run-harness.mjs";
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 const pluginData = process.env.CLAUDE_PLUGIN_DATA;
 const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+const files = process.argv.slice(2).filter(Boolean);
 
 if (!pluginRoot || !pluginData) {
   process.stderr.write("jp-docs-harness: Claude Code Pluginの環境変数がありません。\n");
@@ -25,12 +26,13 @@ try {
     yaml,
     Ajv,
     cwd: projectDir,
+    files,
     configFilePath: path.join(pluginRoot, ".textlintrc.json"),
     nodeModulesDir: path.join(pluginData, "node_modules"),
   });
 
-  if (result.humanOutput) process.stdout.write(`${result.humanOutput}\n`);
-  process.exit(result.hasFindings ? 1 : 0);
+  process.stdout.write(`${result.humanOutput}\n`);
+  process.exit(result.hasErrors ? 1 : 0);
 } catch (error) {
   process.stderr.write(`jp-docs-harness: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(2);
