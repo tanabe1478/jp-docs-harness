@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { consumeClaudeTouchedFiles } from "../lib/integrations/claude-session-files.mjs";
 import { runHarness } from "../lib/run-harness.mjs";
 
 const event = await readEvent();
@@ -13,6 +14,9 @@ if (!pluginRoot || !pluginData || !projectDir) {
 }
 
 try {
+  const files = await consumeClaudeTouchedFiles({ pluginData, event });
+  if (files.length === 0) process.exit(0);
+
   const requireFromData = createRequire(path.join(pluginData, "package.json"));
   const textlintPath = requireFromData.resolve("textlint");
   const yamlPath = requireFromData.resolve("yaml");
@@ -25,13 +29,20 @@ try {
     yaml,
     Ajv,
     cwd: projectDir,
+    files,
     configFilePath: path.join(pluginRoot, ".textlintrc.json"),
     nodeModulesDir: path.join(pluginData, "node_modules"),
   });
 
-  if (!result.hasFindings || event.stop_hook_active) process.exit(0);
+  if (!result.hasFindings) process.exit(0);
+  if (!result.hasErrors) {
+    notify(result.humanOutput);
+  }
+  if (event.stop_hook_active) {
+    notify(`自動修正後も確認が必要な指摘が残っています。\n\n${result.humanOutput}`);
+  }
 
-  block(`Markdownにtextlintの指摘があります。文意を保って修正し、再検査してください。\n\n${result.humanOutput}`);
+  block(`Markdownの検査で修正が必要なエラーが見つかりました。文意を保って修正し、再検査してください。\n\n${result.humanOutput}`);
 } catch (error) {
   block(`jp-docs-harnessの実行に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
 }
@@ -44,6 +55,11 @@ async function readEvent() {
   } catch {
     block("Claude Codeから受け取った入力を解析できませんでした。");
   }
+}
+
+function notify(message) {
+  process.stdout.write(`${JSON.stringify({ systemMessage: message })}\n`);
+  process.exit(0);
 }
 
 function block(reason) {
