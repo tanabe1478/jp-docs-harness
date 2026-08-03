@@ -354,33 +354,25 @@ review:
 
 ## Claude Codeでの動作
 
-Claude CodeのStop hookから別のClaudeプロセスを起動しません。再帰、追加コスト、認証管理を避けるためです。
-
-想定する処理は次の順序です。
+文書検査は利用者がSkillを明示的に実行したときだけ行います。Stop hookによる自動検査は使用しません。
 
 1. Markdownを編集する
-2. Stop hookでSurfaceと結果の鮮度を検査する
-3. 必要な意味検査結果がない場合は終了を差し戻す
-4. 現在のClaudeが`/jp-docs-harness:review-docs`を実行する
-5. Skillがreview packetを読み、チェックごとのJSONを作る
-6. `record`で結果を保存する
-7. AIが修正可能な指摘だけを修正する
-8. `needs_author`を利用者へ伝える
-9. Stop hookが`verify`を実行する
+2. `/jp-docs-harness:lint-docs`または`review-docs`を実行する
+3. Skillが対象リポジトリを限定して検査する
+4. `record`で結果を保存する
+5. AIが修正可能な指摘だけを修正する
+6. `needs_author`を利用者へ伝える
 
-`manual`モードでは、現在の`lint-docs`と同様に利用者が明示的に実行します。`contracted`と`strict`だけがStop hookで意味検査の鮮度を要求します。
+Claude Codeを複数リポジトリの親ディレクトリから起動した場合、`lint-docs`には対象リポジトリまたはMarkdownを明示します。
 
 ## piでの動作
 
-piでは、既存の`agent_settled`連携を拡張します。
+piでも文書検査はスラッシュコマンドを明示的に実行したときだけ行います。`tool_call`による変更追跡と`agent_settled`による自動検査は使用しません。
 
-1. `write`または`edit`で変更されたMarkdownを記録する
-2. `agent_settled`で変更された文書だけを対象にする
-3. Surfaceを実行する
-4. 必要ならreview packetを作る
-5. 意味検査をfollow-upとして現在のエージェントへ依頼する
-6. AIが修正可能な指摘だけを一度修正する
-7. 未解決の指摘と`needs_author`を利用者へ返す
+1. `/lint-docs`または`/review-docs`を実行する
+2. 対象リポジトリまたはMarkdownだけを検査する
+3. AIが修正可能な指摘だけを修正する
+4. 未解決の指摘と`needs_author`を利用者へ返す
 
 意味検査は、本文ハッシュまたは契約ハッシュが変わった場合だけ実行します。同じプロンプト、モデル、ルーブリックによる有効な結果があれば再利用します。
 
@@ -489,10 +481,9 @@ jp-docs-harness/
 
 - AI writing presetによるMarkdown検査
 - 共通のtextlint実行処理
-- Claude Code PluginのStop hook
-- pi packageの`agent_settled`連携
 - Claude Codeとpiの手動lintコマンド
-- 自動修正の反復を一度に制限する状態管理
+- 対象リポジトリまたはMarkdownを明示するスコープ制御
+- 自動hookを使わない明示的な実行モデル
 
 ### Phase 1: 検査基盤の一般化
 

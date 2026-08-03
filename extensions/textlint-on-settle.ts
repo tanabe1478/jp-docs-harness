@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -11,19 +13,20 @@ const MAX_FEEDBACK_LENGTH = 10_000;
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export default function textlintOnSettle(pi: ExtensionAPI) {
-	const touchedMarkdown = new Set<string>();
-	let correctionTurnActive = false;
-	let lintRunning = false;
-
 	pi.registerCommand("lint-docs", {
 		description: "日本語のMarkdown文書をtextlintで検査し、指摘を修正する",
-		handler: async (_args, ctx) => {
-			const result = await lintProject(ctx.cwd);
-			if (!result.hasFindings) {
-				ctx.ui.notify("textlint: 指摘はありません", "info");
-				return;
+		handler: async (args, ctx) => {
+			try {
+				const scope = resolveLintScope(ctx.cwd, args.trim());
+				const result = await lintProject(scope.cwd, scope.files);
+				if (!result.hasFindings) {
+					ctx.ui.notify("textlint: 指摘はありません", "info");
+					return;
+				}
+				pi.sendUserMessage(formatFeedback(result.humanOutput));
+			} catch (error) {
+				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
 			}
-			pi.sendUserMessage(formatFeedback(result.humanOutput));
 		},
 	});
 
@@ -64,58 +67,9 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 			pi.sendUserMessage(reviewInstructions(relativeTarget, cli));
 		},
 	});
-
-	pi.on("tool_call", (event) => {
-		if (event.toolName !== "write" && event.toolName !== "edit") return;
-
-		const input = event.input as { path?: unknown };
-		if (typeof input.path === "string" && MARKDOWN_PATTERN.test(input.path)) {
-			touchedMarkdown.add(input.path);
-		}
-	});
-
-	pi.on("agent_settled", async (_event, ctx) => {
-		if (touchedMarkdown.size === 0 || lintRunning) return;
-
-		lintRunning = true;
-		const files = [...touchedMarkdown];
-		touchedMarkdown.clear();
-
-		try {
-			const result = await lintProject(ctx.cwd, files);
-			if (!result.hasFindings) {
-				correctionTurnActive = false;
-				ctx.ui.notify("textlint: 指摘はありません", "info");
-				return;
-			}
-
-			if (correctionTurnActive) {
-				correctionTurnActive = false;
-				ctx.ui.notify("textlint: 指摘が残っています。/lint-docs で確認してください", "warning");
-				return;
-			}
-
-			correctionTurnActive = true;
-			pi.sendMessage(
-				{
-					customType: "textlint-feedback",
-					content: formatFeedback(result.humanOutput),
-					display: true,
-				},
-				{ deliverAs: "followUp", triggerTurn: true },
-			);
-		} catch (error) {
-			ctx.ui.notify(
-				`textlintの実行に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
-				"error",
-			);
-		} finally {
-			lintRunning = false;
-		}
-	});
 }
 
-async function lintProject(cwd: string, files: string[] = []) {
+async function lintProject(cwd: string, files: string[]) {
 	return runHarness({
 		textlint,
 		yaml,
@@ -125,6 +79,37 @@ async function lintProject(cwd: string, files: string[] = []) {
 		configFilePath: path.join(packageRoot, ".textlintrc.json"),
 		nodeModulesDir: path.join(packageRoot, "node_modules"),
 	});
+}
+
+function resolveLintScope(projectDir: string, target: string): { cwd: string; files: string[] } {
+	const absoluteTarget = path.resolve(projectDir, target || ".");
+	const relativeToProject = path.relative(projectDir, absoluteTarget);
+	if (relativeToProject === ".." || relativeToProject.startsWith(`..${path.sep}`)) {
+		throw new Error("プロジェクト外は検査できません");
+	}
+	if (!existsSync(absoluteTarget)) throw new Error(`対象がありません: ${target}`);
+
+	const targetIsDirectory = statSync(absoluteTarget).isDirectory();
+	const gitStart = targetIsDirectory ? absoluteTarget : path.dirname(absoluteTarget);
+	let repositoryRoot: string;
+	try {
+		repositoryRoot = path.resolve(
+			execFileSync("git", ["-C", gitStart, "rev-parse", "--show-toplevel"], {
+				encoding: "utf8",
+			}).trim(),
+		);
+	} catch {
+		throw new Error("Gitリポジトリを特定できません。/lint-docsに対象リポジトリを指定してください");
+	}
+
+	if (targetIsDirectory) return { cwd: repositoryRoot, files: [] };
+	if (!MARKDOWN_PATTERN.test(absoluteTarget)) {
+		throw new Error("MarkdownファイルまたはGitリポジトリを指定してください");
+	}
+	return {
+		cwd: repositoryRoot,
+		files: [path.relative(repositoryRoot, absoluteTarget).split(path.sep).join("/")],
+	};
 }
 
 function evalInstructions(output: string, cli: string): string {

@@ -1,9 +1,20 @@
 ---
-description: 日本語のMarkdown文書をtextlintで検査し、指摘を修正します。
+description: 指定したGitリポジトリまたはMarkdownをtextlintで検査し、指摘を修正します。
+argument-hint: "[repository-or-Markdown]"
 disable-model-invocation: true
 ---
 
-`node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-lint.mjs"`を実行してください。
+対象は`$ARGUMENTS`です。指定がある場合は次を実行してください。
+
+```console
+node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-lint.mjs" --target "$ARGUMENTS"
+```
+
+指定がない場合は次を実行します。Claude Codeを複数リポジトリの親ディレクトリから起動していると、コマンドは安全のため対象指定を求めて終了します。
+
+```console
+node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-lint.mjs"
+```
 
 指摘がある場合は、対象のMarkdownを読み、意味を変えないように文章を修正してください。すべての修正後に同じコマンドを再実行し、指摘がなくなったことを確認してください。
 

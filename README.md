@@ -40,10 +40,13 @@ claude --plugin-dir /path/to/jp-docs-harness
 手動検査には、名前空間付きスラッシュコマンドを使用します。
 
 ```text
-/jp-docs-harness:lint-docs
+/jp-docs-harness:lint-docs /path/to/repository
+/jp-docs-harness:lint-docs docs/design.md
 ```
 
-`Stop`フックはClaude Codeの応答終了時に一度だけ検査します。編集操作ごとにはtextlintを実行しません。初回起動時と依存関係の更新時には、Plugin専用の永続データディレクトリへ依存パッケージをインストールします。導入先プロジェクトの`package.json`は変更しません。
+Claude Codeを複数リポジトリの親ディレクトリから起動した場合は、対象リポジトリまたはMarkdownを明示してください。
+
+文書検査は手動コマンドを実行したときだけ行います。Stop hookによる自動検査は無効です。初回起動時と依存関係の更新時には、Plugin専用の永続データディレクトリへ依存パッケージをインストールします。導入先プロジェクトの`package.json`は変更しません。
 
 Pluginの構成要素は次の場所にあります。
 
@@ -69,10 +72,10 @@ pi install git:github.com/tanabe1478/jp-docs-harness
 piでは次のスラッシュコマンドを使用します。
 
 ```text
-/lint-docs
+/lint-docs <repository-or-Markdown>
 ```
 
-[`extensions/textlint-on-settle.ts`](./extensions/textlint-on-settle.ts)はMarkdownへの`write`または`edit`を記録し、エージェントの処理が完了した`agent_settled`のタイミングで一度だけ検査します。指摘がある場合に限り、修正用のターンを一度だけ開始します。
+`agent_settled`による自動検査と、ファイル変更の自動追跡は無効です。文書検査は手動コマンドを実行したときだけ行います。
 
 pi packageの依存関係はインストール時に自動で導入されます。導入先プロジェクトにNode.jsパッケージを追加する必要はありません。
 
