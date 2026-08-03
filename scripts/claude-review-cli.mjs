@@ -1,12 +1,17 @@
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { compareRunReports } from "../lib/eval/compare-run-reports.mjs";
+import { evaluateCorpusRun, prepareCorpusRun } from "../lib/eval/corpus-run.mjs";
 import { prepareReviewPackets } from "../lib/semantic/prepare-review.mjs";
 import { snapshotUrlSources } from "../lib/semantic/snapshot-sources.mjs";
 import {
+  createReviewResultValidator,
   inspectStoredReview,
   loadJsonFile,
   recordReviewResult,
+  validateReviewResult,
 } from "../lib/semantic/review-result.mjs";
 
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
@@ -26,7 +31,45 @@ try {
   const reviewPacketSchemaPath = path.join(pluginRoot, "schemas", "review-packet.schema.json");
   const reviewResultSchemaPath = path.join(pluginRoot, "schemas", "review-result.schema.json");
 
-  if (command === "prepare") {
+  if (command === "eval-diff") {
+    if (args.length !== 2) fail("eval-diffにはbaselineとcandidateのreportを指定してください");
+    const baseline = await loadJsonFile(path.resolve(cwd, args[0]));
+    const candidate = await loadJsonFile(path.resolve(cwd, args[1]));
+    process.stdout.write(`${JSON.stringify(compareRunReports(baseline, candidate), null, 2)}\n`);
+  } else if (command === "eval-prepare") {
+    if (args.length !== 1) fail("eval-prepareには出力ディレクトリを指定してください");
+    const manifest = await prepareCorpusRun({
+      cwd: pluginRoot,
+      corpusRoot: path.join(pluginRoot, "eval", "cases"),
+      outputDir: path.resolve(cwd, args[0]),
+      prepareReviewPackets,
+      yaml,
+      Ajv,
+      intentSchemaPath,
+    });
+    process.stdout.write(`${JSON.stringify(manifest, null, 2)}\n`);
+  } else if (command === "eval-suite") {
+    if (args.length !== 1) fail("eval-suiteにはcandidateディレクトリを指定してください");
+    const validateResult = await createReviewResultValidator({ Ajv, reviewResultSchemaPath });
+    const report = await evaluateCorpusRun({
+      corpusRoot: path.join(pluginRoot, "eval", "cases"),
+      candidateDir: path.resolve(cwd, args[0]),
+      validateResult,
+      inspectCandidate: async ({ caseId, candidate, candidateDir }) => {
+        const packetPath = path.join(candidateDir, `${caseId}.packet.json`);
+        if (!existsSync(packetPath)) return [`review packetがありません: ${packetPath}`];
+        const packet = await loadJsonFile(packetPath);
+        return validateReviewResult({ result: candidate, packet, validate: validateResult });
+      },
+    });
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    process.exitCode =
+      report.corpus.missingCases.length === 0 &&
+      report.corpus.invalidCases.length === 0 &&
+      !report.corpus.mixedJudges
+        ? 0
+        : 1;
+  } else if (command === "prepare") {
     if (args.length !== 1) fail("prepareにはMarkdownファイルを1件指定してください");
     const [packet] = await prepareReviewPackets({ cwd, files: args, yaml, Ajv, intentSchemaPath });
     process.stdout.write(`${JSON.stringify(packet, null, 2)}\n`);

@@ -8,6 +8,8 @@ import * as textlint from "textlint";
 import * as yaml from "yaml";
 import { hashContent } from "../lib/core/content-hash.mjs";
 import { compareReviewResults } from "../lib/eval/compare-review-results.mjs";
+import { compareRunReports } from "../lib/eval/compare-run-reports.mjs";
+import { evaluateCorpusRun, prepareCorpusRun } from "../lib/eval/corpus-run.mjs";
 import { createSurfaceFinding } from "../lib/core/finding.mjs";
 import { resolveTargetPatterns } from "../lib/core/target-files.mjs";
 import { runHarness } from "../lib/run-harness.mjs";
@@ -605,6 +607,11 @@ requirements:
 
 await test("evalはJudge結果を単一スコアにせず次元別に比較する", () => {
   const base = {
+    document: { path: "doc.md", contentHash: `sha256:${"a".repeat(64)}` },
+    contract: { path: "doc.md.intent.yml", contractHash: `sha256:${"b".repeat(64)}` },
+    rubricHash: `sha256:${"c".repeat(64)}`,
+    evidenceHash: `sha256:${"d".repeat(64)}`,
+    judge: { provider: "test", model: "gold", promptVersion: "2" },
     evaluations: [
       { checkId: "check-1", verdict: "meets", resolution: "none" },
       { checkId: "check-2", verdict: "missing", resolution: "agent" },
@@ -630,8 +637,43 @@ await test("evalはJudge結果を単一スコアにせず次元別に比較す�
   assert.equal("score" in report, false);
 });
 
+await test("eval suiteはpacketを生成しcandidateを次元別に集計する", async () => {
+  const outputDir = await mkdtemp(path.join(os.tmpdir(), "jp-docs-eval-suite-"));
+  try {
+    const corpusRoot = path.join(projectRoot, "eval", "cases");
+    const manifest = await prepareCorpusRun({
+      cwd: projectRoot,
+      corpusRoot,
+      outputDir,
+      prepareReviewPackets,
+      yaml,
+      Ajv,
+      intentSchemaPath: path.join(projectRoot, "schemas", "intent.schema.json"),
+    });
+    assert.equal(manifest.cases.length, 3);
+    for (const item of manifest.cases) {
+      const gold = await readFile(path.join(corpusRoot, item.id, "gold.json"), "utf8");
+      await writeFile(path.join(outputDir, item.candidateFile), gold);
+    }
+    const report = await evaluateCorpusRun({ corpusRoot, candidateDir: outputDir });
+    assert.equal(report.corpus.evaluatedCases, 3);
+    assert.equal(report.corpus.missingCases.length, 0);
+    assert.equal(report.corpus.mixedJudges, false);
+    assert.equal(report.dimensions.groundingVerdict.accuracy, 1);
+    assert.equal("score" in report, false);
+    const regressed = structuredClone(report);
+    regressed.dimensions.groundingVerdict.accuracy = 0.5;
+    const diff = compareRunReports(report, regressed);
+    assert.equal(diff.dimensions.groundingVerdict.delta, -0.5);
+    assert.equal("score" in diff, false);
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+});
+
 await test("公開するJSON Schemaは有効なJSONである", async () => {
   for (const file of [
+    "eval-run.schema.json",
     "evidence-lock.schema.json",
     "finding.schema.json",
     "report.schema.json",

@@ -115,6 +115,9 @@ npx jp-docs-harness prepare docs/design.md > review-packet.json
 npx jp-docs-harness record review-packet.json review-result.json
 npx jp-docs-harness verify docs/design.md
 npx jp-docs-harness eval gold.json candidate.json
+npx jp-docs-harness eval-prepare .jp-docs-harness/eval-runs/current
+npx jp-docs-harness eval-suite .jp-docs-harness/eval-runs/current
+npx jp-docs-harness eval-diff baseline-report.json candidate-report.json
 ```
 
 Claude Codeとpiから意味レビューを実行できます。
@@ -125,4 +128,8 @@ Claude Codeとpiから意味レビューを実行できます。
 
 # pi
 /review-docs docs/design.md
+
+# Judge回帰評価
+/jp-docs-harness:eval-harness .jp-docs-harness/eval-runs/current
+/eval-harness .jp-docs-harness/eval-runs/current
 ```

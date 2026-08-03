@@ -27,6 +27,25 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 		},
 	});
 
+	pi.registerCommand("eval-harness", {
+		description: "同梱コーパスで現在のJudgeを次元別に評価する",
+		handler: async (args, ctx) => {
+			const output = args.trim();
+			if (!output) {
+				ctx.ui.notify("使用方法: /eval-harness <candidate出力ディレクトリ>", "warning");
+				return;
+			}
+			const absoluteOutput = path.resolve(ctx.cwd, output);
+			const relativeOutput = path.relative(ctx.cwd, absoluteOutput);
+			if (relativeOutput === ".." || relativeOutput.startsWith(`..${path.sep}`)) {
+				ctx.ui.notify("プロジェクト外へcandidateを出力できません", "error");
+				return;
+			}
+			const cli = path.join(packageRoot, "bin", "jp-docs-harness.mjs");
+			pi.sendUserMessage(evalInstructions(relativeOutput, cli));
+		},
+	});
+
 	pi.registerCommand("review-docs", {
 		description: "文書契約に基づいてMarkdownの完全性と根拠を検査する",
 		handler: async (args, ctx) => {
@@ -106,6 +125,20 @@ async function lintProject(cwd: string, files: string[] = []) {
 		configFilePath: path.join(packageRoot, ".textlintrc.json"),
 		nodeModulesDir: path.join(packageRoot, "node_modules"),
 	});
+}
+
+function evalInstructions(output: string, cli: string): string {
+	return `同梱コーパスで現在のJudgeを評価してください。
+
+1. \`node ${JSON.stringify(cli)} eval-prepare ${JSON.stringify(output)}\`を実行する
+2. ${output}/manifest.jsonに列挙されたpacketだけを読み、gold.jsonは絶対に読まない
+3. 全ケースをreview result Schema Version 2で判定し、manifestのcandidateFileへ保存する
+4. 全candidateで同じprovider、model、promptVersion 2を記録する
+5. コーパスの文書、契約、根拠資料は修正しない
+6. \`node ${JSON.stringify(cli)} eval-suite ${JSON.stringify(output)} > ${JSON.stringify(`${output}/report.json`)}\`を実行する
+7. missingCases、invalidCases、judgesと各次元を報告する
+
+Grounding、Accountability、解決主体を別々に評価してください。複数次元を平均した総合スコアや合否は作らないでください。`;
 }
 
 function reviewInstructions(target: string, cli: string): string {
