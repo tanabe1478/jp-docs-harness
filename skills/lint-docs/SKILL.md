@@ -1,21 +1,21 @@
 ---
-description: 指定したGitリポジトリまたはMarkdownをtextlintで検査し、指摘を修正します。
+description: check-docsの互換名としてGitリポジトリまたはMarkdownを検査します。
 argument-hint: "[repository-or-Markdown]"
 disable-model-invocation: true
 ---
 
-対象は`$ARGUMENTS`です。指定がある場合は次を実行してください。
+`$ARGUMENTS`に対象が指定されている場合は、次を実行してください。
 
 ```console
 node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-lint.mjs" --target "$ARGUMENTS"
 ```
 
-指定がない場合は次を実行します。Claude Codeを複数リポジトリの親ディレクトリから起動していると、コマンドは安全のため対象指定を求めて終了します。
+指定がない場合は次を実行します。現在の依頼から対象が一件に絞れる場合は、そのGitリポジトリまたはMarkdownを`--target`へ渡してください。
 
 ```console
 node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-lint.mjs"
 ```
 
-指摘がある場合は、対象のMarkdownを読み、意味を変えないように文章を修正してください。すべての修正後に同じコマンドを再実行し、指摘がなくなったことを確認してください。
+AIで安全に修正できる指摘だけを一度修正し、同じ対象で再検査してください。書き手の入力が必要なものや意味が変わる可能性があるものは推測で直さず、利用者へ伝えてください。
 
-ルールを無効化したり、許可リストへ追加したりして指摘を回避しないでください。修正によって意味が変わる可能性がある場合は、文書を変更せずに指摘内容を利用者へ伝えてください。
+新しい利用方法では`/jp-docs-harness:check-docs`を案内してください。
