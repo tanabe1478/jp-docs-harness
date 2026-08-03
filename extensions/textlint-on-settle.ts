@@ -1,16 +1,21 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import Ajv from "ajv/dist/2020.js";
 import * as textlint from "textlint";
 import * as yaml from "yaml";
+import { resolveDocumentScope } from "../lib/core/document-scope.mjs";
 import { runHarness } from "../lib/run-harness.mjs";
 
-const MARKDOWN_PATTERN = /\.(?:md|markdown)$/i;
 const MAX_FEEDBACK_LENGTH = 10_000;
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+type ScopePromptContext = {
+	cwd: string;
+	ui: {
+		input(title: string, placeholder?: string): Promise<string | undefined>;
+	};
+};
 
 export default function textlintOnSettle(pi: ExtensionAPI) {
 	pi.registerCommand("check-docs", {
@@ -77,7 +82,7 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 					target = (await ctx.ui.input("レビュー対象", "Markdownファイルのパス"))?.trim() ?? "";
 				}
 				if (!target) return;
-				const scope = resolveLintScope(ctx.cwd, target);
+				const scope = resolveDocumentScope({ projectDir: ctx.cwd, target });
 				if (scope.files.length !== 1) {
 					ctx.ui.notify("意味レビューにはMarkdownファイルを一件指定してください", "warning");
 					return;
@@ -91,16 +96,16 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 	});
 }
 
-async function resolveCheckScope(ctx: any, target: string) {
-	if (target) return resolveLintScope(ctx.cwd, target);
+async function resolveCheckScope(ctx: ScopePromptContext, target: string) {
+	if (target) return resolveDocumentScope({ projectDir: ctx.cwd, target });
 	try {
-		return resolveLintScope(ctx.cwd, "");
+		return resolveDocumentScope({ projectDir: ctx.cwd });
 	} catch {
 		const selected = (await ctx.ui.input(
 			"検査対象",
 			"GitリポジトリまたはMarkdownファイルのパス",
 		))?.trim();
-		return selected ? resolveLintScope(ctx.cwd, selected) : null;
+		return selected ? resolveDocumentScope({ projectDir: ctx.cwd, target: selected }) : null;
 	}
 }
 
@@ -114,37 +119,6 @@ async function lintProject(cwd: string, files: string[]) {
 		configFilePath: path.join(packageRoot, ".textlintrc.json"),
 		nodeModulesDir: path.join(packageRoot, "node_modules"),
 	});
-}
-
-function resolveLintScope(projectDir: string, target: string): { cwd: string; files: string[] } {
-	const absoluteTarget = path.resolve(projectDir, target || ".");
-	const relativeToProject = path.relative(projectDir, absoluteTarget);
-	if (relativeToProject === ".." || relativeToProject.startsWith(`..${path.sep}`)) {
-		throw new Error("プロジェクト外は検査できません");
-	}
-	if (!existsSync(absoluteTarget)) throw new Error(`対象がありません: ${target}`);
-
-	const targetIsDirectory = statSync(absoluteTarget).isDirectory();
-	const gitStart = targetIsDirectory ? absoluteTarget : path.dirname(absoluteTarget);
-	let repositoryRoot: string;
-	try {
-		repositoryRoot = path.resolve(
-			execFileSync("git", ["-C", gitStart, "rev-parse", "--show-toplevel"], {
-				encoding: "utf8",
-			}).trim(),
-		);
-	} catch {
-		throw new Error("Gitリポジトリを特定できません。検査対象を指定してください");
-	}
-
-	if (targetIsDirectory) return { cwd: repositoryRoot, files: [] };
-	if (!MARKDOWN_PATTERN.test(absoluteTarget)) {
-		throw new Error("MarkdownファイルまたはGitリポジトリを指定してください");
-	}
-	return {
-		cwd: repositoryRoot,
-		files: [path.relative(repositoryRoot, absoluteTarget).split(path.sep).join("/")],
-	};
 }
 
 function evalInstructions(output: string, cli: string): string {
