@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { resolveDocumentScope } from "../lib/core/document-scope.mjs";
+import { fileURLToPath } from "node:url";
 import {
   formatHarnessReport,
   hasBlockingFindings,
@@ -157,6 +158,31 @@ await test("GitリポジトリとMarkdownの対象を安全に解決する", asy
       cwd: notes,
       files: ["memo.md"],
     });
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+await test("claude-lint.mjsはClaude Codeの環境変数なしでも依存を解決する", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "jp-docs-harness-env-"));
+  const script = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "scripts",
+    "claude-lint.mjs",
+  );
+
+  try {
+    await writeFile(path.join(workspace, "memo.md"), "# メモ\n", "utf8");
+    const environment = Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !key.startsWith("CLAUDE_")),
+    );
+    const output = execFileSync("node", [script, "--target", "memo.md"], {
+      cwd: workspace,
+      env: environment,
+      encoding: "utf8",
+    });
+    assert.match(output, /Markdown 1件を検査しました/);
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }

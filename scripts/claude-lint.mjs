@@ -1,22 +1,19 @@
-import { createRequire } from "node:module";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveDocumentScope } from "../lib/core/document-scope.mjs";
 import { runHarness } from "../lib/run-harness.mjs";
+import { resolvePluginContext } from "./plugin-context.mjs";
 
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
-const pluginData = process.env.CLAUDE_PLUGIN_DATA;
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
-
-if (!pluginRoot || !pluginData) {
-  process.stderr.write("jp-docs-harness: Claude Code Pluginの環境変数がありません。\n");
-  process.exit(2);
-}
 
 try {
   const target = parseTarget(process.argv.slice(2));
   const scope = resolveDocumentScope({ projectDir, target });
-  const requireFromData = createRequire(path.join(pluginData, "package.json"));
+  const { pluginRoot, nodeModulesDir, requireFromData } = resolvePluginContext({
+    packageRoot,
+    probe: "textlint",
+  });
   const textlintPath = requireFromData.resolve("textlint");
   const yamlPath = requireFromData.resolve("yaml");
   const ajvPath = requireFromData.resolve("ajv/dist/2020.js");
@@ -30,7 +27,7 @@ try {
     cwd: scope.cwd,
     files: scope.files,
     configFilePath: path.join(pluginRoot, ".textlintrc.json"),
-    nodeModulesDir: path.join(pluginData, "node_modules"),
+    nodeModulesDir,
   });
 
   process.stdout.write(`${result.humanOutput}\n`);
