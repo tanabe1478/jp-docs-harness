@@ -138,7 +138,7 @@ Grounding、Accountability、解決主体を別々に評価してください。
 function reviewInstructions(target: string, cli: string, repositoryRoot: string): string {
 	const resultSchema = path.resolve(path.dirname(cli), "..", "schemas", "review-result.schema.json");
 	const root = JSON.stringify(repositoryRoot);
-	return `${target}を意味レビューしてください。作業対象のGitリポジトリは${repositoryRoot}です。
+	return `${target}を意味レビューしてください。作業ディレクトリは${repositoryRoot}です。
 
 最初に対象本文を読み、文書契約${target}.intent.ymlが存在するか確認してください。契約がなければ、本文と現在の利用者の依頼から、想定読者、読後に得てほしい理解・判断・行動、欠かせない内容を抽出し、最小の文書契約を作成してください。目的を合理的に特定できる場合は確認を挟まず進め、結果の冒頭で採用した前提を短く示してください。目的によって評価が大きく変わる場合だけ、利用者へ一つの簡潔な質問をしてください。書き手の経験や動機を推測してauthor_onlyへ追加してはいけません。契約を作成した場合は、そのパスと下書きであることを報告してください。
 

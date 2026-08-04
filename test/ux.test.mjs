@@ -148,6 +148,15 @@ await test("GitリポジトリとMarkdownの対象を安全に解決する", asy
       () => resolveDocumentScope({ projectDir: workspace }),
       /Gitリポジトリを特定できません/,
     );
+
+    // Gitに属さないMarkdownは、1件指定に限りファイルのディレクトリを境界にする。
+    const notes = path.join(await realpath(workspace), "notes");
+    await mkdir(path.join(workspace, "notes"));
+    await writeFile(path.join(workspace, "notes", "memo.md"), "# メモ\n", "utf8");
+    assert.deepEqual(resolveDocumentScope({ projectDir: workspace, target: "notes/memo.md" }), {
+      cwd: notes,
+      files: ["memo.md"],
+    });
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
