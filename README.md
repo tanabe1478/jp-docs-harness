@@ -17,6 +17,8 @@ Claude Code Plugin、pi package、CLIとして利用できます。導入先プ�
 
 通常は`check-docs`で仕上げを確認し、重要なREADME、設計文書、提案書には`review-docs`を使います。
 
+対象の境界は通常Gitリポジトリです。Gitリポジトリに属さないMarkdownも1件単位で指定でき、その場合はファイルのあるディレクトリを境界として、文書契約と`.jp-docs-harness/`を文書の隣に配置します。ディレクトリ全体の検査にはGitリポジトリが必要です。
+
 ## Claude Codeで試す
 
 マーケットプレイスを追加し、Pluginをインストールします。
