@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 `$ARGUMENTS`に対象が指定されている場合は、次を実行してください。
 
+`${CLAUDE_PLUGIN_ROOT}`がシェルで未設定の場合は、このスキルのベースディレクトリの二階層上（プラグインルート）の絶対パスへ読み替えてください。環境変数を手動で設定する必要はありません。
+
 ```console
 node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-lint.mjs" --target "$ARGUMENTS"
 ```

@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { compareRunReports } from "../lib/eval/compare-run-reports.mjs";
 import { evaluateCorpusRun, prepareCorpusRun } from "../lib/eval/corpus-run.mjs";
 import { prepareReviewPackets } from "../lib/semantic/prepare-review.mjs";
@@ -13,16 +12,14 @@ import {
   recordReviewResult,
   validateReviewResult,
 } from "../lib/semantic/review-result.mjs";
+import { resolvePluginContext } from "./plugin-context.mjs";
 
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
-const pluginData = process.env.CLAUDE_PLUGIN_DATA;
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
-
-if (!pluginRoot || !pluginData) fail("Claude Code Pluginの環境変数がありません");
 
 try {
   const [command, ...args] = process.argv.slice(2);
-  const requireFromData = createRequire(path.join(pluginData, "package.json"));
+  const { pluginRoot, requireFromData } = resolvePluginContext({ packageRoot });
   const yamlPath = requireFromData.resolve("yaml");
   const ajvPath = requireFromData.resolve("ajv/dist/2020.js");
   const yaml = await import(pathToFileURL(yamlPath).href);
