@@ -1,33 +1,25 @@
 # jp-docs-harness
 
-AIが生成する日本語Markdownをtextlintで検査するハーネスです。
-AIが生成しがちな不自然な構造や表現を検出する`@textlint-ja/textlint-rule-preset-ai-writing`を使用します。
+AIと一緒に書いた日本語Markdownを、表現だけでなく、目的への適合、根拠、書き手の入力まで確認するハーネスです。
 
-Claude Code Pluginとpi packageの両方として配布できるため、導入先の各プロジェクトへ設定ファイルをコピーする必要はありません。
+AIが書いた文章かどうかを判定するツールではありません。読者が文書から必要な理解、判断、行動を得られるかを確認し、AIが直せる問題と、書き手本人へ戻すべき問題を分けます。
 
-今後の製品構想とロードマップは、[`docs/product-plan.md`](./docs/product-plan.md)にまとめています。完全性評価へ応用するGAMUT論文の調査結果は、[`docs/research/gamut.md`](./docs/research/gamut.md)にあります。文書契約は[`docs/document-contract.md`](./docs/document-contract.md)、レビュー結果とGroundingは[`docs/semantic-review.md`](./docs/semantic-review.md)、Judge比較は[`docs/evaluation.md`](./docs/evaluation.md)を参照してください。
+Claude Code Plugin、pi package、CLIとして利用できます。導入先プロジェクトの`package.json`へ依存パッケージを追加する必要はありません。
 
-## このリポジトリを開発する
+## 二つの入口
 
-Node.jsのバージョンはmiseで管理します。
+| コマンド | 役割 | 対象 |
+| --- | --- | --- |
+| `check-docs` | 不自然な表現、契約の形式、保存済みレビューの状態を確認する | GitリポジトリまたはMarkdown |
+| `review-docs` | 文書の目的、完全性、主張の根拠、書き手の入力をAIで確認する | Markdown一件 |
 
-```console
-mise install
-mise run setup
-mise run lint
-```
+文書検査は明示的にコマンドを実行したときだけ動きます。Claude CodeのStop hookやpiの`agent_settled`による自動検査は行いません。作業を勝手に中断せず、複数リポジトリの親ディレクトリから起動した場合にも、意図しないリポジトリを検査しないためです。
 
-ルールの設定は[`.textlintrc.json`](./.textlintrc.json)で管理します。
+通常は`check-docs`で仕上げを確認し、重要なREADME、設計文書、提案書には`review-docs`を使います。
 
-## Claude Code Plugin
+## Claude Codeで試す
 
-ローカルで試す場合は、このリポジトリをPluginとして指定します。
-
-```console
-claude --plugin-dir /path/to/jp-docs-harness
-```
-
-継続して利用する場合は、リポジトリをマーケットプレイスとして追加してPluginをインストールします。
+マーケットプレイスを追加し、Pluginをインストールします。
 
 ```text
 /plugin marketplace add tanabe1478/jp-docs-harness
@@ -35,104 +27,199 @@ claude --plugin-dir /path/to/jp-docs-harness
 /reload-plugins
 ```
 
-ユーザースコープでインストールすれば、Claude Codeを使用する複数のプロジェクトで有効になります。
-
-手動検査には、名前空間付きスラッシュコマンドを使用します。
+リポジトリ全体を軽量検査します。
 
 ```text
-/jp-docs-harness:lint-docs /path/to/repository
-/jp-docs-harness:lint-docs docs/design.md
+/jp-docs-harness:check-docs /path/to/repository
 ```
 
-Claude Codeを複数リポジトリの親ディレクトリから起動した場合は、対象リポジトリまたはMarkdownを明示してください。
+Markdown一件だけを検査することもできます。
 
-文書検査は手動コマンドを実行したときだけ行います。Stop hookによる自動検査は無効です。初回起動時と依存関係の更新時には、Plugin専用の永続データディレクトリへ依存パッケージをインストールします。導入先プロジェクトの`package.json`は変更しません。
+```text
+/jp-docs-harness:check-docs docs/design.md
+```
 
-Pluginの構成要素は次の場所にあります。
+文書の内容までレビューする場合は次のコマンドを使用します。
 
-- [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json)
-- [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
-- [`skills/lint-docs/SKILL.md`](./skills/lint-docs/SKILL.md)
-- [`hooks/hooks.json`](./hooks/hooks.json)
+```text
+/jp-docs-harness:review-docs docs/design.md
+```
 
-## pi package
+対象を省略し、現在の依頼で編集したMarkdownが一件に絞れる場合は、その文書を使用します。複数候補がある場合だけ選択を求めます。
 
-ローカルパスからユーザースコープへインストールすると、複数のプロジェクトで利用できます。
+ローカルのリポジトリをPluginとして試すこともできます。
 
 ```console
-pi install /path/to/jp-docs-harness
+claude --plugin-dir /path/to/jp-docs-harness
 ```
 
-Gitで公開した後は、Git URLからインストールできます。
+初回起動時と依存関係の更新時には、Plugin専用の永続データディレクトリへ依存パッケージをインストールします。導入先プロジェクトの`package.json`は変更しません。
+
+## piで試す
+
+Gitリポジトリからユーザースコープへインストールします。
 
 ```console
 pi install git:github.com/tanabe1478/jp-docs-harness
 ```
 
-piでは次のスラッシュコマンドを使用します。
+ローカルの変更を試す場合は、パスを指定します。
 
-```text
-/lint-docs <repository-or-Markdown>
+```console
+pi install /path/to/jp-docs-harness
 ```
 
-`agent_settled`による自動検査と、ファイル変更の自動追跡は無効です。文書検査は手動コマンドを実行したときだけ行います。
+軽量検査と意味レビューの入口は次の二つです。
 
-pi packageの依存関係はインストール時に自動で導入されます。導入先プロジェクトにNode.jsパッケージを追加する必要はありません。
+```text
+/check-docs /path/to/repository
+/review-docs docs/design.md
+```
+
+`check-docs`の対象を省略した場合、現在の作業ディレクトリが一つのGitリポジトリに属していれば、そのリポジトリを使います。複数リポジトリの親ディレクトリなど、対象を決められない場合は入力欄を表示します。
+
+`review-docs`の対象を省略した場合も、Markdownのパスを入力できます。
+
+従来の`/lint-docs`は`/check-docs`の互換名として利用できます。
+
+## 検査結果の読み方
+
+人間向けの結果は重要度ごとにまとまり、次に誰が対応すべきかを表示します。
+
+```text
+Markdown 1件を検査しました: エラー 1件、警告 2件
+意味レビュー: 未実行 1件（重要文書にはreview-docsを使用）
+
+エラー 1件
+  docs/design.md 文書の目的に必要な説明がありません (...) [AIで修正可能]
+
+警告 2件
+  docs/design.md:18:1 説明が一般的すぎます (...) [AIで修正可能]
+  docs/design.md 書き手の判断理由を確認できません (...) [書き手に確認]
+
+対応の目安
+  AIで修正できる指摘: 2件
+  書き手の入力が必要な指摘: 1件
+```
+
+表示の意味は次の通りです。
+
+- `[AIで修正可能]`: 文意を保てる範囲でエージェントが修正できます
+- `[書き手に確認]`: 経験、動機、判断などをAIが推測せず、利用者へ質問します
+- `[手作業で修正]`: 構成の入れ替えなど、自動修正では文意を保てません
+- `[要確認]`: 資料だけでは判断できないため、不確実性を残します
+
+`意味レビュー`の行は、保存済みレビューが本文、契約、根拠資料に対して最新かを示します。`未実行`でも軽量検査の失敗ではありませんが、文書の目的や根拠までは確認されていません。
+
+表現上の警告だけでは、既定でCLIを失敗扱いにしません。契約違反などのエラーがある場合だけ終了コード1を返します。
+
+## 意味レビューと文書契約
+
+意味レビューには、対象文書の目的と読者を表す文書契約を使用します。`docs/design.md`に対する契約は`docs/design.md.intent.yml`です。
+
+`review-docs`の初回実行時に契約がなければ、エージェントが現在の依頼と本文から最小構成を作ります。目的を合理的に決められない場合だけ、利用者へ一つの質問を返します。
+
+作成される契約は、たとえば次のようになります。
+
+```yaml
+version: 1
+profile: technical-explainer
+
+audience:
+  knows: []
+  problem:
+    - 導入方法と制約が分からない
+
+reader_delta:
+  know:
+    - ツールが検査する内容
+  decide:
+    - 自分のプロジェクトへ導入するか
+  do:
+    - 手動検査を実行する
+
+requirements:
+  critical:
+    - インストール方法
+    - 検査結果への対応方法
+  valuable:
+    - 自動実行しない理由
+  context: []
+```
+
+契約は次回以降のレビューにも使われます。エージェントは書き手固有の経験や判断を契約へ勝手に追加せず、必要な場合は`needs_author`として返します。
+
+レビュー結果は次の場所へ保存されます。
+
+```text
+.jp-docs-harness/reviews/<Markdownのパス>.review.json
+```
+
+本文、契約、根拠資料のいずれかが変わると、保存済みレビューは古いものとして検出されます。
 
 ## CLI
 
-npmパッケージとして公開した後は、AIエージェントを使わずに検査できます。
+CLIでは`check`が既定のコマンドです。コマンド名を省略しても構いません。
 
 ```console
-npx jp-docs-harness
+jp-docs-harness README.md
+jp-docs-harness check README.md docs/design.md
 ```
 
-特定のMarkdownだけを検査する場合は、ファイルパスを指定します。
-
-```console
-npx jp-docs-harness README.md docs/design.md
-```
-
-他のツールから結果を利用する場合は、共通finding形式のJSONを出力できます。
-
-```console
-npx jp-docs-harness lint --format json README.md
-```
-
-すべての対象文書へ文書契約を要求する場合は、`strict`モードを指定します。
-
-```console
-npx jp-docs-harness lint --review-mode strict docs/design.md
-```
-
-有効な文書契約から意味レビュー用のreview packetを生成できます。
-
-```console
-npx jp-docs-harness snapshot docs/design.md
-npx jp-docs-harness prepare docs/design.md > review-packet.json
-```
-
-意味レビューの結果を検証して保存し、本文や契約の変更後に鮮度を確認できます。
-
-```console
-npx jp-docs-harness record review-packet.json review-result.json
-npx jp-docs-harness verify docs/design.md
-npx jp-docs-harness eval gold.json candidate.json
-npx jp-docs-harness eval-prepare .jp-docs-harness/eval-runs/current
-npx jp-docs-harness eval-suite .jp-docs-harness/eval-runs/current
-npx jp-docs-harness eval-diff baseline-report.json candidate-report.json
-```
-
-Claude Codeとpiから意味レビューを実行できます。
+問題がなければ成功メッセージと意味レビューの状態を表示します。
 
 ```text
-# Claude Code
-/jp-docs-harness:review-docs docs/design.md
-
-# pi
-/review-docs docs/design.md
-
-# Judge回帰評価
-/jp-docs-harness:eval-harness .jp-docs-harness/eval-runs/current
-/eval-harness .jp-docs-harness/eval-runs/current
+Markdown 2件を検査しました。問題はありません。
+意味レビュー: 最新 1件、未実行 1件（重要文書にはreview-docsを使用）
 ```
+
+機械処理にはJSON出力を使用できます。
+
+```console
+jp-docs-harness check --format json README.md
+```
+
+すべての対象文書へ文書契約を要求する場合は`strict`モードを指定します。
+
+```console
+jp-docs-harness check --review-mode strict docs/design.md
+```
+
+表現上の警告も許さない場合は、`--fail-on warning`で終了コード1にする重要度を上げられます。CIで文体を揃えたい場合に使用します。
+
+```console
+jp-docs-harness check --fail-on warning README.md
+```
+
+`lint`は`check`の互換名です。`prepare`、`snapshot`、`record`は意味レビューの内部処理として残していますが、Claude Codeやpiの利用者が通常直接実行する必要はありません。
+
+## 生成されるファイル
+
+| パス | 用途 | 推奨する扱い |
+| --- | --- | --- |
+| `*.md.intent.yml` | 文書の目的、読者、必須内容 | 文書と一緒にレビューする |
+| `.jp-docs-harness/reviews/` | 検証済みの意味レビュー結果 | チームやCIで共有する場合は管理対象にする |
+| `.jp-docs-harness/evidence/` | URL根拠資料の再現可能なsnapshot | 根拠を共有する場合はlockと一緒に管理する |
+| `.jp-docs-harness/work/` | 一時的なreview packetと結果 | Gitへ追加しない |
+
+## 詳細資料
+
+- [文書契約の形式と検査モード](./docs/document-contract.md)
+- [意味レビュー、Grounding、結果の鮮度](./docs/semantic-review.md)
+- [Judgeの回帰評価](./docs/evaluation.md)
+- [製品構想とロードマップ](./docs/product-plan.md)
+- [GAMUT論文から取り入れた設計](./docs/research/gamut.md)
+
+## 開発
+
+Node.jsのバージョンはmiseで管理します。
+
+```console
+mise install
+mise run setup
+npm test
+mise run lint
+npm run pack:check
+```
+
+textlintの設定は[`.textlintrc.json`](./.textlintrc.json)、Claude CodeのPlugin設定は[`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json)、piの統合は[`extensions/textlint-on-settle.ts`](./extensions/textlint-on-settle.ts)にあります。

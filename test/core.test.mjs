@@ -58,7 +58,8 @@ await test("createSurfaceFindingはtextlintの指摘を共通形式へ変換す�
   });
 
   assert.equal(finding.gate, "surface");
-  assert.equal(finding.severity, "error");
+  // 表現上の指摘は助言のため、textlintのerrorもwarningへ落とす。
+  assert.equal(finding.severity, "warning");
   assert.equal(finding.document, "docs/example.md");
   assert.deepEqual(finding.location, {
     startLine: 3,

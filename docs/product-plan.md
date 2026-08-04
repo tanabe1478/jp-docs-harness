@@ -357,19 +357,19 @@ review:
 文書検査は利用者がSkillを明示的に実行したときだけ行います。Stop hookによる自動検査は使用しません。
 
 1. Markdownを編集する
-2. `/jp-docs-harness:lint-docs`または`review-docs`を実行する
+2. `/jp-docs-harness:check-docs`または`review-docs`を実行する
 3. Skillが対象リポジトリを限定して検査する
 4. `record`で結果を保存する
 5. AIが修正可能な指摘だけを修正する
 6. `needs_author`を利用者へ伝える
 
-Claude Codeを複数リポジトリの親ディレクトリから起動した場合、`lint-docs`には対象リポジトリまたはMarkdownを明示します。
+Claude Codeを複数リポジトリの親ディレクトリから起動した場合、`check-docs`には対象リポジトリまたはMarkdownを明示します。
 
 ## piでの動作
 
 piでも文書検査はスラッシュコマンドを明示的に実行したときだけ行います。`tool_call`による変更追跡と`agent_settled`による自動検査は使用しません。
 
-1. `/lint-docs`または`/review-docs`を実行する
+1. `/check-docs`または`/review-docs`を実行する
 2. 対象リポジトリまたはMarkdownだけを検査する
 3. AIが修正可能な指摘だけを修正する
 4. 未解決の指摘と`needs_author`を利用者へ返す
@@ -462,7 +462,7 @@ jp-docs-harness/
     intent.schema.json
     review-result.schema.json
   skills/
-    lint-docs/
+    check-docs/
     review-docs/
   extensions/
     docs-harness-on-settle.ts
