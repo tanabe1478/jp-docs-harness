@@ -34,7 +34,7 @@ try {
   });
 
   process.stdout.write(`${result.humanOutput}\n`);
-  process.exit(result.hasErrors ? 1 : 0);
+  process.exit(result.hasBlocking ? 1 : 0);
 } catch (error) {
   process.stderr.write(`jp-docs-harness: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(2);

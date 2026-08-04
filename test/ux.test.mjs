@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -79,17 +79,40 @@ await test("formatHarnessReportは重要度と解決主体をまとめる", () =
   assert.equal(hasBlockingFindings(report), true);
 });
 
-await test("警告だけのレポートはブロックしない", () => {
+await test("警告だけのレポートは既定ではブロックしない", () => {
   const report = {
     findings: [{ severity: "warning" }],
   };
   assert.equal(hasBlockingFindings(report), false);
+  assert.equal(hasBlockingFindings(report, { failOn: "warning" }), true);
+});
+
+await test("AIが修正できない指摘は手作業として表示する", () => {
+  const output = formatHarnessReport({
+    documents: [{ path: "docs/design.md" }],
+    findings: [
+      {
+        document: "docs/design.md",
+        ruleId: "semantic/check-1",
+        severity: "error",
+        resolution: "agent",
+        message: "構成の入れ替えが必要です",
+        location: null,
+        repairableByAgent: false,
+      },
+    ],
+    summary: { documents: 1, findings: 1, errors: 1, warnings: 0, infos: 0 },
+  });
+
+  assert.match(output, /\[手作業で修正\]/);
+  assert.match(output, /手作業での修正が必要な指摘: 1件/);
 });
 
 await test("GitリポジトリとMarkdownの対象を安全に解決する", async () => {
+  // macOSのos.tmpdir()はsymlinkのため、Gitが返す実体パスへ揃うことも確認する。
   const workspace = await mkdtemp(path.join(os.tmpdir(), "jp-docs-harness-scope-"));
-  const repository = path.join(workspace, "project");
-  const document = path.join(repository, "docs", "design.md");
+  const repository = path.join(await realpath(workspace), "project");
+  const document = path.join(workspace, "project", "docs", "design.md");
 
   try {
     await mkdir(path.dirname(document), { recursive: true });
@@ -114,7 +137,7 @@ await test("GitリポジトリとMarkdownの対象を安全に解決する", asy
     });
 
     assert.throws(
-      () => resolveDocumentScope({ projectDir: repository, target: "../outside.md" }),
+      () => resolveDocumentScope({ projectDir: workspace, target: "../outside.md" }),
       /プロジェクト外/,
     );
     assert.throws(
