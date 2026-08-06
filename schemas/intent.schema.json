@@ -43,6 +43,13 @@
         }
       ]
     },
+    "style": {
+      "type": "object",
+      "properties": {
+        "bold": { "enum": ["forbid", "moderate", "allow"] }
+      },
+      "additionalProperties": false
+    },
     "evidence": {
       "type": "object",
       "properties": {

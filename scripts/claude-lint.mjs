@@ -8,7 +8,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 
 try {
-  const target = parseTarget(process.argv.slice(2));
+  const { target, boldPolicy } = parseOptions(process.argv.slice(2));
   const scope = resolveDocumentScope({ projectDir, target });
   const { pluginRoot, nodeModulesDir, requireFromData } = resolvePluginContext({
     packageRoot,
@@ -26,6 +26,7 @@ try {
     Ajv,
     cwd: scope.cwd,
     files: scope.files,
+    boldPolicy,
     configFilePath: path.join(pluginRoot, ".textlintrc.json"),
     nodeModulesDir,
   });
@@ -37,8 +38,19 @@ try {
   process.exit(2);
 }
 
-function parseTarget(args) {
-  if (args.length === 0) return "";
-  if (args.length === 2 && args[0] === "--target") return args[1];
-  throw new Error("check-docsにはGitリポジトリまたはMarkdownを1件だけ指定してください");
+function parseOptions(args) {
+  let target = "";
+  let boldPolicy = "forbid";
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === "--target" && args[index + 1] !== undefined) {
+      target = args[index + 1];
+      index += 1;
+    } else if (args[index] === "--bold" && ["forbid", "moderate", "allow"].includes(args[index + 1])) {
+      boldPolicy = args[index + 1];
+      index += 1;
+    } else {
+      throw new Error("check-docsにはGitリポジトリまたはMarkdownを1件だけ指定してください");
+    }
+  }
+  return { target, boldPolicy };
 }

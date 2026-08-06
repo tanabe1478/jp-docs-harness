@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
-import { analyzeDocumentStyle } from "../lib/gates/style.mjs";
+import { analyzeDocumentStyle, styleGate } from "../lib/gates/style.mjs";
 
 function ruleIds(findings) {
   return findings.map((finding) => finding.ruleId);
@@ -11,6 +14,7 @@ await test("1文に複数の太字がある場合に警告する", () => {
     document: "docs/report.md",
     content:
       "`resource_class: medium` は **2 vCPU / 4GB** で、この 4GB は**プライマリコンテナと全サービスコンテナの合計**である。\n",
+    boldPolicy: "moderate",
   });
 
   assert.deepEqual(ruleIds(findings), ["style/bold-in-sentence"]);
@@ -23,6 +27,7 @@ await test("同じ行でも別の文に分かれた太字は警告しない", ()
     document: "docs/report.md",
     content:
       "Playwright は**同梱ブラウザ**を使う。一見すると無駄なステップに見えるが、**共有ライブラリの供給源**として機能している。\n",
+    boldPolicy: "moderate",
   });
 
   assert.deepEqual(ruleIds(findings), []);
@@ -32,6 +37,7 @@ await test("文全体が太字の場合に警告する", () => {
   const findings = analyzeDocumentStyle({
     document: "docs/report.md",
     content: "**ローカル（macOS）では 2 件 11 秒で通ったが、CI では通らなかった。**\n",
+    boldPolicy: "moderate",
   });
 
   assert.deepEqual(ruleIds(findings), ["style/bold-sentence"]);
@@ -45,6 +51,7 @@ await test("太字が文書全体へ散ると密度の警告を1件出す", () =
   const findings = analyzeDocumentStyle({
     document: "docs/report.md",
     content: `${lines.join("\n\n")}\n`,
+    boldPolicy: "moderate",
   });
 
   assert.deepEqual(ruleIds(findings), ["style/bold-density"]);
@@ -92,7 +99,50 @@ await test("問題のない文書には何も報告しない", () => {
   const findings = analyzeDocumentStyle({
     document: "docs/report.md",
     content: "この文書は**一箇所だけ**を強調し、事実を淡々と述べる。\n",
+    boldPolicy: "moderate",
   });
 
   assert.deepEqual(ruleIds(findings), []);
+});
+
+await test("既定では太字そのものを警告する", () => {
+  const findings = analyzeDocumentStyle({
+    document: "docs/report.md",
+    content: "この文書は**一箇所だけ**を強調している。\n",
+  });
+
+  assert.deepEqual(ruleIds(findings), ["style/bold-forbidden"]);
+  assert.equal(findings[0].severity, "warning");
+});
+
+await test("allowでは太字を警告しない", () => {
+  const findings = analyzeDocumentStyle({
+    document: "docs/report.md",
+    content: "**文全体が太字でも許可される。**という教訓。\n",
+    boldPolicy: "allow",
+  });
+
+  assert.deepEqual(ruleIds(findings), ["style/editorializing"]);
+});
+
+await test("文書契約のstyle.boldは実行時の既定より優先される", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-harness-style-"));
+  try {
+    await writeFile(path.join(cwd, "memo.md"), "**強調**を使う。\n", "utf8");
+    const documents = [
+      { path: "memo.md", contract: { path: "memo.md.intent.yml", status: "valid", style: { bold: "allow" } } },
+    ];
+
+    const result = await styleGate.run({ cwd, documents, boldPolicy: "forbid" });
+    assert.deepEqual(ruleIds(result.findings), []);
+
+    const withoutContract = await styleGate.run({
+      cwd,
+      documents: [{ path: "memo.md" }],
+      boldPolicy: "forbid",
+    });
+    assert.deepEqual(ruleIds(withoutContract.findings), ["style/bold-forbidden"]);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
 });
