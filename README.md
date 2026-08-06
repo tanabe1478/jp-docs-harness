@@ -10,7 +10,7 @@ Claude Code Plugin、pi package、CLIとして利用できます。導入先プ�
 
 | コマンド | 役割 | 対象 |
 | --- | --- | --- |
-| `check-docs` | 不自然な表現、強調の乱用、評価・感想の付け足し、契約の形式、保存済みレビューの状態を確認する | GitリポジトリまたはMarkdown |
+| `check-docs` | 不自然な表現、太字の使用、評価・感想の付け足し、契約の形式、保存済みレビューの状態を確認する | GitリポジトリまたはMarkdown |
 | `review-docs` | 文書の目的、完全性、主張の根拠、書き手の入力をAIで確認する | Markdown一件 |
 
 文書検査は明示的にコマンドを実行したときだけ動きます。Claude CodeのStop hookやpiの`agent_settled`による自動検査は行いません。作業を勝手に中断せず、複数リポジトリの親ディレクトリから起動した場合にも、意図しないリポジトリを検査しないためです。
@@ -191,6 +191,23 @@ jp-docs-harness check --review-mode strict docs/design.md
 
 ```console
 jp-docs-harness check --fail-on warning README.md
+```
+
+太字の扱いは選択できます。既定は`forbid`（太字なし）で、太字が使われていると警告します。
+
+```console
+jp-docs-harness check --bold moderate docs/design.md
+```
+
+- `forbid`（既定）: 太字が使われていると警告する
+- `moderate`: 1文に複数、文全体、文書全体への散らばりなど、乱用だけを警告する
+- `allow`: 太字を検査しない
+
+文書ごとに固定する場合は、文書契約へ`style.bold`を書きます。契約の宣言は`--bold`より優先されます。
+
+```yaml
+style:
+  bold: moderate
 ```
 
 `lint`は`check`の互換名です。`prepare`、`snapshot`、`record`は意味レビューの内部処理として残していますが、Claude Codeやpiの利用者が通常直接実行する必要はありません。

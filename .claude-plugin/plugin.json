@@ -1,7 +1,7 @@
 {
   "name": "jp-docs-harness",
   "description": "日本語Markdownの表現、目的適合性、根拠、書き手の入力を検査するハーネス",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "author": {
     "name": "tanabe1478",
     "url": "https://github.com/tanabe1478"
