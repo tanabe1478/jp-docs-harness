@@ -1,6 +1,6 @@
 {
   "name": "jp-docs-harness",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "AIと人間が書いた日本語Markdownの表現、目的適合性、根拠を検査するハーネス",
   "type": "module",
   "license": "MIT",
