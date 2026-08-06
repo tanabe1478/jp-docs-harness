@@ -1,7 +1,6 @@
 ---
-description: 指定したGitリポジトリまたは日本語Markdownを検査します。
+description: 日本語Markdownの軽量検査。利用者が文書やMarkdownの検査、チェック、lint、仕上げの確認を依頼したとき、または書き終えた文書を確認してほしいと言ったときに使用します。GitリポジトリまたはMarkdown一件を対象に、不自然な表現、太字の使用、評価・感想の付け足し、文書契約の形式を決定論的に確認します。文書の目的や根拠まで見る依頼にはreview-docsを使用します。
 argument-hint: "[repository-or-Markdown]"
-disable-model-invocation: true
 ---
 
 `$ARGUMENTS`に対象が指定されている場合は、次を実行してください。

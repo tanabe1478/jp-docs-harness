@@ -1,7 +1,6 @@
 ---
-description: Markdownの目的、完全性、根拠、書き手の入力を意味レビューします。
+description: 日本語Markdownの意味レビュー。利用者が文書のレビュー、内容や構成の確認、目的に合っているかの確認、根拠の確認を依頼したときに使用します。Markdown一件を対象に、文書契約に基づいて目的への適合、完全性、主張の根拠、書き手の入力の要否をレビューします。表現だけの軽い検査にはcheck-docsを使用します。
 argument-hint: "[Markdownファイル]"
-disable-model-invocation: true
 ---
 
 ## 対象とリポジトリを決める
