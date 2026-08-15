@@ -171,7 +171,9 @@ function reviewInstructions(target: string, cli: string, repositoryRoot: string)
 7. \`cd ${root} && node ${JSON.stringify(cli)} record .jp-docs-harness/work/review-packet.json .jp-docs-harness/work/review-result.json\`を実行する
 8. \`cd ${root} && node ${JSON.stringify(cli)} verify ${JSON.stringify(target)}\`を実行する
 
-missing、contradicts、partially_meetsには本文の根拠行と理由を付けてください。needs_authorを推測で解決しないでください。agentが修正可能な指摘だけを一度修正できます。修正した場合はreview packetの生成から記録までを一度だけやり直し、問題が残れば利用者へ返してください。`;
+missing、contradicts、partially_meetsには本文の根拠行と理由を付けてください。needs_authorを推測で解決しないでください。agentが修正可能な指摘だけを一度修正できます。修正した場合はreview packetの生成から記録までを一度だけやり直し、問題が残れば利用者へ返してください。
+
+判定と並行して、根拠が近くに示されていない評価の断定、宛先が読めない規範（してはならない等）、事実を隠す比喩（嵌まる・効く等）を本文から集めてください。根拠を先に示した評価と、仕様の適合要件として書かれた規範は正当です。該当箇所は結果JSONへ含めず、最後の報告で行番号と言い換え案を添えた助言として示し、本文は自動修正しないでください。`;
 }
 
 function formatFeedback(output: string): string {

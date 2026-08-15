@@ -146,3 +146,35 @@ await test("文書契約のstyle.boldは実行時の既定より優先される"
     await rm(cwd, { recursive: true, force: true });
   }
 });
+
+await test("LLM調の比喩と評価の定型表現を警告する", () => {
+  const findings = analyzeDocumentStyle({
+    document: "docs/report.md",
+    content: [
+      "mainがフロントオリジン統一に寄せてあるので、この形が素直に嵌まる。",
+      "セットアップの手間が最大の問題だった。",
+      "SPAが読めなくてもAPIを直接叩けてしまうため意味がない。",
+      "ALBの費用が固定費として効く。",
+      "",
+    ].join("\n"),
+    boldPolicy: "moderate",
+  });
+
+  assert.deepEqual(ruleIds(findings), Array(4).fill("style/editorializing"));
+});
+
+await test("文脈依存の表現は決定論では警告しない", () => {
+  const findings = analyzeDocumentStyle({
+    document: "docs/report.md",
+    content: [
+      "実装は、この値を検査してはならない。",
+      "この設定は公開するものではない。",
+      "リストの順序に意味はない。",
+      "キャッシュが効くため再取得は発生しない。",
+      "",
+    ].join("\n"),
+    boldPolicy: "moderate",
+  });
+
+  assert.deepEqual(ruleIds(findings), []);
+});

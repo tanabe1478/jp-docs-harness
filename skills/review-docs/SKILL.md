@@ -104,6 +104,16 @@ review packetだけを判定材料として使用してください。本文生�
 
 結果を[`schemas/review-result.schema.json`](${CLAUDE_PLUGIN_ROOT}/schemas/review-result.schema.json)に適合するJSONとして、`<REPO_ROOT>/.jp-docs-harness/work/review-result.json`へ保存してください。`document`、`contract`、`rubricHash`、`evidenceHash`はreview packetからそのままコピーします。`judge`には現在のproviderとmodelが分かる場合は記録し、分からない場合は`current-agent`とします。`promptVersion`は`2`です。
 
+## 表現の警戒
+
+判定と並行して、次に該当する表現を本文から集めてください。rubricの判定には入れず、結果JSONにも含めません。
+
+- 書き手の評価・感想が事実の形で書かれ、近くに根拠が示されていない断定（`最大の問題`、`〜しても意味がない`のような型）
+- 宛先や理由が本文から読めない規範（`〜してはならない`、`〜するものではない`）
+- 具体的な事実や数値を隠す比喩（`嵌まる`、`効く`、`刺さる`など）
+
+根拠を先に示した評価と、仕様の適合要件として書かれた規範（profileが`reference`の場合など）は正当なので挙げないでください。該当箇所は最後の報告で、行番号と言い換え案を添えて助言として示してください。この観点では本文を自動修正しません。
+
 ## 記録と確認
 
 結果を検証して記録します。
