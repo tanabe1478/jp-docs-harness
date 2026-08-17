@@ -46,7 +46,8 @@
     "style": {
       "type": "object",
       "properties": {
-        "bold": { "enum": ["forbid", "moderate", "allow"] }
+        "bold": { "enum": ["forbid", "moderate", "allow"] },
+        "reading_load": { "enum": ["off", "check"] }
       },
       "additionalProperties": false
     },

@@ -212,6 +212,12 @@ style:
   bold: moderate
 ```
 
+読解負荷（一文の長さ、二重否定、「の」の連鎖）を指し示すには`--reading-load`を付けます。指摘はすべて情報レベルで、終了コードには影響しません。文書契約の`style.reading_load: check`でも有効にできます。詳細は[読解負荷レーン](./docs/reading-load.md)を参照してください。
+
+```console
+jp-docs-harness check --reading-load docs/design.md
+```
+
 `lint`は`check`の互換名です。`prepare`、`snapshot`、`record`は意味レビューの内部処理として残していますが、Claude Codeやpiの利用者が通常直接実行する必要はありません。
 
 ## 生成されるファイル
@@ -226,6 +232,7 @@ style:
 ## 詳細資料
 
 - [文書契約の形式と検査モード](./docs/document-contract.md)
+- [読解負荷レーンと見送った検出器](./docs/reading-load.md)
 - [意味レビュー、Grounding、結果の鮮度](./docs/semantic-review.md)
 - [Judgeの回帰評価](./docs/evaluation.md)
 - [製品構想とロードマップ](./docs/product-plan.md)

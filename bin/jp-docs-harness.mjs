@@ -172,6 +172,7 @@ try {
     reviewMode: options.reviewMode,
     failOn: options.failOn,
     boldPolicy: options.boldPolicy,
+    readingLoad: options.readingLoad,
     configFilePath,
     nodeModulesDir: path.join(packageRoot, "node_modules"),
     intentSchemaPath,
@@ -212,6 +213,7 @@ function parseArguments(args) {
   let reviewMode = "manual";
   let failOn = "error";
   let boldPolicy = "forbid";
+  let readingLoad = "off";
   let output;
 
   for (let index = 0; index < remaining.length; index += 1) {
@@ -243,6 +245,8 @@ function parseArguments(args) {
       }
       boldPolicy = value;
       index += 1;
+    } else if (argument === "--reading-load") {
+      readingLoad = "check";
     } else if (argument === "--fail-on") {
       const value = remaining[index + 1];
       if (!["error", "warning"].includes(value)) {
@@ -259,9 +263,9 @@ function parseArguments(args) {
     }
   }
 
-  return { command, files, format, help, reviewMode, failOn, boldPolicy, output };
+  return { command, files, format, help, reviewMode, failOn, boldPolicy, readingLoad, output };
 }
 
 function printHelp() {
-  process.stdout.write(`jp-docs-harness [check] [options] [files...]\n\nまず試す:\n  jp-docs-harness README.md\n  jp-docs-harness check docs/design.md\n\n主なコマンド:\n  check [files...]         文書を検査する（既定）\n  lint [files...]          checkの互換名\n  verify <file>            保存済み意味レビューの鮮度を確認する\n\n意味レビューの内部コマンド:\n  prepare <file>           review packetを生成する\n  snapshot <file>          URL根拠資料をローカルへ保存する\n  record <packet> <result> レビュー結果を検証して保存する\n\nJudge評価:\n  eval <gold> <candidate>  Judge結果を次元別に比較する\n  eval-prepare <dir>       同梱コーパスのreview packetを生成する\n  eval-suite <dir>         candidate一式をコーパスと比較する\n  eval-diff <base> <new>   二つのrun reportを次元別に比較する\n\nオプション:\n  --format <stylish|json>                  出力形式を指定する\n  --json                                   --format jsonの短縮形\n  --review-mode <manual|contracted|strict> 文書契約の適用方法を指定する\n  --bold <forbid|moderate|allow>           太字の扱いを指定する（既定は太字なし）\n  --fail-on <error|warning>                終了コード1にする重要度を指定する\n  --output <path>                          recordの保存先を指定する\n  -h, --help                               ヘルプを表示する\n\n既定では表現上の警告だけなら終了コード0、契約違反などのエラーがあれば終了コード1です。\nCIで警告も許さない場合は--fail-on warningを指定します。\n`);
+  process.stdout.write(`jp-docs-harness [check] [options] [files...]\n\nまず試す:\n  jp-docs-harness README.md\n  jp-docs-harness check docs/design.md\n\n主なコマンド:\n  check [files...]         文書を検査する（既定）\n  lint [files...]          checkの互換名\n  verify <file>            保存済み意味レビューの鮮度を確認する\n\n意味レビューの内部コマンド:\n  prepare <file>           review packetを生成する\n  snapshot <file>          URL根拠資料をローカルへ保存する\n  record <packet> <result> レビュー結果を検証して保存する\n\nJudge評価:\n  eval <gold> <candidate>  Judge結果を次元別に比較する\n  eval-prepare <dir>       同梱コーパスのreview packetを生成する\n  eval-suite <dir>         candidate一式をコーパスと比較する\n  eval-diff <base> <new>   二つのrun reportを次元別に比較する\n\nオプション:\n  --format <stylish|json>                  出力形式を指定する\n  --json                                   --format jsonの短縮形\n  --review-mode <manual|contracted|strict> 文書契約の適用方法を指定する\n  --bold <forbid|moderate|allow>           太字の扱いを指定する（既定は太字なし）\n  --reading-load                           読解負荷（長文・二重否定・の連鎖）も指す\n  --fail-on <error|warning>                終了コード1にする重要度を指定する\n  --output <path>                          recordの保存先を指定する\n  -h, --help                               ヘルプを表示する\n\n既定では表現上の警告だけなら終了コード0、契約違反などのエラーがあれば終了コード1です。\nCIで警告も許さない場合は--fail-on warningを指定します。\n`);
 }

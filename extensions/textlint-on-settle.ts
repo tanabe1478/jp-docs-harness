@@ -22,10 +22,10 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 		description: "Gitリポジトリまたは日本語Markdownを検査する",
 		handler: async (args, ctx) => {
 			try {
-				const { target, boldPolicy } = parseCheckArgs(args);
+				const { target, boldPolicy, readingLoad } = parseCheckArgs(args);
 				const scope = await resolveCheckScope(ctx, target);
 				if (!scope) return;
-				const result = await lintProject(scope.cwd, scope.files, boldPolicy);
+				const result = await lintProject(scope.cwd, scope.files, boldPolicy, readingLoad);
 				if (!result.hasFindings) {
 					ctx.ui.notify(result.humanOutput, "info");
 					return;
@@ -41,10 +41,10 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 		description: "check-docsの互換名",
 		handler: async (args, ctx) => {
 			try {
-				const { target, boldPolicy } = parseCheckArgs(args);
+				const { target, boldPolicy, readingLoad } = parseCheckArgs(args);
 				const scope = await resolveCheckScope(ctx, target);
 				if (!scope) return;
-				const result = await lintProject(scope.cwd, scope.files, boldPolicy);
+				const result = await lintProject(scope.cwd, scope.files, boldPolicy, readingLoad);
 				if (!result.hasFindings) {
 					ctx.ui.notify(result.humanOutput, "info");
 					return;
@@ -111,25 +111,29 @@ async function resolveCheckScope(ctx: ScopePromptContext, target: string) {
 	}
 }
 
-function parseCheckArgs(args: string): { target: string; boldPolicy: string } {
+function parseCheckArgs(args: string): { target: string; boldPolicy: string; readingLoad: string } {
 	const tokens = args.trim().split(/\s+/).filter(Boolean);
 	let boldPolicy = "forbid";
+	let readingLoad = "off";
 	const rest: string[] = [];
 	for (let index = 0; index < tokens.length; index += 1) {
 		if (tokens[index] === "--bold" && ["forbid", "moderate", "allow"].includes(tokens[index + 1])) {
 			boldPolicy = tokens[index + 1];
 			index += 1;
+		} else if (tokens[index] === "--reading-load") {
+			readingLoad = "check";
 		} else {
 			rest.push(tokens[index]);
 		}
 	}
-	return { target: rest.join(" "), boldPolicy };
+	return { target: rest.join(" "), boldPolicy, readingLoad };
 }
 
-async function lintProject(cwd: string, files: string[], boldPolicy = "forbid") {
+async function lintProject(cwd: string, files: string[], boldPolicy = "forbid", readingLoad = "off") {
 	return runHarness({
 		textlint,
 		boldPolicy,
+		readingLoad,
 		yaml,
 		Ajv,
 		cwd,
