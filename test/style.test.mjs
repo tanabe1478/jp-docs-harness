@@ -178,3 +178,28 @@ await test("文脈依存の表現は決定論では警告しない", () => {
 
   assert.deepEqual(ruleIds(findings), []);
 });
+
+await test("指示への応答の定型表現を警告する", () => {
+  const findings = analyzeDocumentStyle({
+    document: "docs/report.md",
+    content: [
+      "ご指示のとおり、認証の詳細には触れていません。",
+      "指定された通りの構成で説明する。",
+      "",
+    ].join("\n"),
+    boldPolicy: "moderate",
+  });
+
+  assert.deepEqual(ruleIds(findings), Array(2).fill("style/instruction-leakage"));
+  assert.match(findings[0].message, /指示への応答/);
+});
+
+await test("読者向けのスコープ宣言は決定論では警告しない", () => {
+  const findings = analyzeDocumentStyle({
+    document: "docs/report.md",
+    content: "本記事ではデプロイ手順には触れません。別紙の手順書を参照してください。\n",
+    boldPolicy: "moderate",
+  });
+
+  assert.deepEqual(ruleIds(findings), []);
+});
