@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: review-request-fires-review-docs
+description: 目的適合のレビュー依頼でreview-docsが起動し、表現ではなく内容を評価するか
+context:
+  scaffold_script: fixture.sh

@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: check-request-fires-check-docs
+description: 表現の確認を求める自然な依頼でcheck-docsが起動し、指摘を報告するか
+context:
+  scaffold_script: fixture.sh

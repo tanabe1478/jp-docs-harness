@@ -241,6 +241,7 @@ jp-docs-harness check --no-ai-words docs/design.md
 - [読解負荷レーンと見送った検出器](./docs/reading-load.md)
 - [意味レビュー、Grounding、結果の鮮度](./docs/semantic-review.md)
 - [Judgeの回帰評価](./docs/evaluation.md)
+- [プラグインの挙動評価](./docs/plugin-evals.md)
 - [製品構想とロードマップ](./docs/product-plan.md)
 - [GAMUT論文から取り入れた設計](./docs/research/gamut.md)
 
@@ -255,5 +256,7 @@ npm test
 mise run lint
 npm run pack:check
 ```
+
+プラグインがClaudeの挙動を変えているかは`claude plugin eval`で測ります。実行のたびにモデル呼び出しの費用が発生するため、通常の検査には含めていません。手順と測定結果は[プラグインの挙動評価](./docs/plugin-evals.md)にあります。
 
 textlintの設定は[`.textlintrc.json`](./.textlintrc.json)、Claude CodeのPlugin設定は[`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json)、piの統合は[`extensions/textlint-on-settle.ts`](./extensions/textlint-on-settle.ts)にあります。

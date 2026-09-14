@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: unrelated-request-fires-nothing
+description: Markdownを扱うがドキュメント検査ではない依頼で、skillが誤って起動しないか
+context:
+  scaffold_script: fixture.sh
