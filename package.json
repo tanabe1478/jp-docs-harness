@@ -1,6 +1,6 @@
 {
   "name": "jp-docs-harness",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "AIと人間が書いた日本語Markdownの表現、目的適合性、根拠を検査するハーネス",
   "type": "module",
   "license": "MIT",
@@ -27,6 +27,7 @@
   "files": [
     ".claude-plugin/",
     ".textlintrc.json",
+    ".textlintrc.ai-words.json",
     "AGENTS.md",
     "bin/",
     "eval/",
@@ -50,6 +51,7 @@
     "@textlint-ja/textlint-rule-preset-ai-writing": "1.7.0",
     "ajv": "8.18.0",
     "textlint": "15.8.0",
+    "textlint-rule-preset-ai-words-ja": "1.2.0",
     "yaml": "2.8.3"
   },
   "peerDependencies": {

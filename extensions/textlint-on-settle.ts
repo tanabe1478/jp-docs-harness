@@ -22,10 +22,10 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 		description: "Gitリポジトリまたは日本語Markdownを検査する",
 		handler: async (args, ctx) => {
 			try {
-				const { target, boldPolicy, readingLoad } = parseCheckArgs(args);
+				const { target, boldPolicy, readingLoad, aiWords } = parseCheckArgs(args);
 				const scope = await resolveCheckScope(ctx, target);
 				if (!scope) return;
-				const result = await lintProject(scope.cwd, scope.files, boldPolicy, readingLoad);
+				const result = await lintProject(scope.cwd, scope.files, boldPolicy, readingLoad, aiWords);
 				if (!result.hasFindings) {
 					ctx.ui.notify(result.humanOutput, "info");
 					return;
@@ -41,10 +41,10 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 		description: "check-docsの互換名",
 		handler: async (args, ctx) => {
 			try {
-				const { target, boldPolicy, readingLoad } = parseCheckArgs(args);
+				const { target, boldPolicy, readingLoad, aiWords } = parseCheckArgs(args);
 				const scope = await resolveCheckScope(ctx, target);
 				if (!scope) return;
-				const result = await lintProject(scope.cwd, scope.files, boldPolicy, readingLoad);
+				const result = await lintProject(scope.cwd, scope.files, boldPolicy, readingLoad, aiWords);
 				if (!result.hasFindings) {
 					ctx.ui.notify(result.humanOutput, "info");
 					return;
@@ -111,10 +111,16 @@ async function resolveCheckScope(ctx: ScopePromptContext, target: string) {
 	}
 }
 
-function parseCheckArgs(args: string): { target: string; boldPolicy: string; readingLoad: string } {
+function parseCheckArgs(args: string): {
+	target: string;
+	boldPolicy: string;
+	readingLoad: string;
+	aiWords: boolean;
+} {
 	const tokens = args.trim().split(/\s+/).filter(Boolean);
 	let boldPolicy = "forbid";
 	let readingLoad = "off";
+	let aiWords = false;
 	const rest: string[] = [];
 	for (let index = 0; index < tokens.length; index += 1) {
 		if (tokens[index] === "--bold" && ["forbid", "moderate", "allow"].includes(tokens[index + 1])) {
@@ -122,14 +128,22 @@ function parseCheckArgs(args: string): { target: string; boldPolicy: string; rea
 			index += 1;
 		} else if (tokens[index] === "--reading-load") {
 			readingLoad = "check";
+		} else if (tokens[index] === "--ai-words") {
+			aiWords = true;
 		} else {
 			rest.push(tokens[index]);
 		}
 	}
-	return { target: rest.join(" "), boldPolicy, readingLoad };
+	return { target: rest.join(" "), boldPolicy, readingLoad, aiWords };
 }
 
-async function lintProject(cwd: string, files: string[], boldPolicy = "forbid", readingLoad = "off") {
+async function lintProject(
+	cwd: string,
+	files: string[],
+	boldPolicy = "forbid",
+	readingLoad = "off",
+	aiWords = false,
+) {
 	return runHarness({
 		textlint,
 		boldPolicy,
@@ -138,7 +152,7 @@ async function lintProject(cwd: string, files: string[], boldPolicy = "forbid", 
 		Ajv,
 		cwd,
 		files,
-		configFilePath: path.join(packageRoot, ".textlintrc.json"),
+		configFilePath: path.join(packageRoot, aiWords ? ".textlintrc.ai-words.json" : ".textlintrc.json"),
 		nodeModulesDir: path.join(packageRoot, "node_modules"),
 	});
 }
