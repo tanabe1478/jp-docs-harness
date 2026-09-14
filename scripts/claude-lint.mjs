@@ -28,7 +28,7 @@ try {
     files: scope.files,
     boldPolicy,
     readingLoad,
-    configFilePath: path.join(pluginRoot, aiWords ? ".textlintrc.ai-words.json" : ".textlintrc.json"),
+    configFilePath: path.join(pluginRoot, aiWords ? ".textlintrc.json" : ".textlintrc.no-ai-words.json"),
     nodeModulesDir,
   });
 
@@ -43,7 +43,7 @@ function parseOptions(args) {
   let target = "";
   let boldPolicy = "forbid";
   let readingLoad = "off";
-  let aiWords = false;
+  let aiWords = true;
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === "--target" && args[index + 1] !== undefined) {
       target = args[index + 1];
@@ -53,8 +53,8 @@ function parseOptions(args) {
       index += 1;
     } else if (args[index] === "--reading-load") {
       readingLoad = "check";
-    } else if (args[index] === "--ai-words") {
-      aiWords = true;
+    } else if (args[index] === "--no-ai-words") {
+      aiWords = false;
     } else {
       throw new Error("check-docsにはGitリポジトリまたはMarkdownを1件だけ指定してください");
     }

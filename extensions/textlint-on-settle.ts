@@ -120,7 +120,7 @@ function parseCheckArgs(args: string): {
 	const tokens = args.trim().split(/\s+/).filter(Boolean);
 	let boldPolicy = "forbid";
 	let readingLoad = "off";
-	let aiWords = false;
+	let aiWords = true;
 	const rest: string[] = [];
 	for (let index = 0; index < tokens.length; index += 1) {
 		if (tokens[index] === "--bold" && ["forbid", "moderate", "allow"].includes(tokens[index + 1])) {
@@ -128,8 +128,8 @@ function parseCheckArgs(args: string): {
 			index += 1;
 		} else if (tokens[index] === "--reading-load") {
 			readingLoad = "check";
-		} else if (tokens[index] === "--ai-words") {
-			aiWords = true;
+		} else if (tokens[index] === "--no-ai-words") {
+			aiWords = false;
 		} else {
 			rest.push(tokens[index]);
 		}
@@ -142,7 +142,7 @@ async function lintProject(
 	files: string[],
 	boldPolicy = "forbid",
 	readingLoad = "off",
-	aiWords = false,
+	aiWords = true,
 ) {
 	return runHarness({
 		textlint,
@@ -152,7 +152,7 @@ async function lintProject(
 		Ajv,
 		cwd,
 		files,
-		configFilePath: path.join(packageRoot, aiWords ? ".textlintrc.ai-words.json" : ".textlintrc.json"),
+		configFilePath: path.join(packageRoot, aiWords ? ".textlintrc.json" : ".textlintrc.no-ai-words.json"),
 		nodeModulesDir: path.join(packageRoot, "node_modules"),
 	});
 }

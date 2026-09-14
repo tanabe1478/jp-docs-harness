@@ -218,10 +218,10 @@ style:
 jp-docs-harness check --reading-load docs/design.md
 ```
 
-AIが多用する語彙（「効く」「入口」「既定では」など）を検査するには`--ai-words`を付けます。[textlint-rule-preset-ai-words-ja](https://github.com/p1ass/textlint-rule-preset-ai-words-ja)を同梱しており、形態素解析により活用形も検出します。辞書の語は普通の技術文書にも現れるため既定では無効です。
+AIが多用する語彙（「効く」「入口」「既定では」など）は既定で検査されます。[textlint-rule-preset-ai-words-ja](https://github.com/p1ass/textlint-rule-preset-ai-words-ja)を同梱しており、形態素解析により活用形も検出します。正当な用法を含むため指摘は情報レベルで、終了コードには影響しません。辞書が業務用語と衝突する場合は`--no-ai-words`で外せます。
 
 ```console
-jp-docs-harness check --ai-words docs/design.md
+jp-docs-harness check --no-ai-words docs/design.md
 ```
 
 `lint`は`check`の互換名です。`prepare`、`snapshot`、`record`は意味レビューの内部処理として残していますが、Claude Codeやpiの利用者が通常直接実行する必要はありません。

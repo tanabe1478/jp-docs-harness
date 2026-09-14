@@ -1,6 +1,0 @@
-{
-  "rules": {
-    "@textlint-ja/preset-ai-writing": true,
-    "preset-ai-words-ja": true
-  }
-}

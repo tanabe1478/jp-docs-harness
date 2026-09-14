@@ -13,7 +13,7 @@ const cli = path.resolve(
   "jp-docs-harness.mjs",
 );
 
-await test("--ai-wordsでAIが多用する語彙を警告し、既定では検査しない", async () => {
+await test("AIが多用する語彙を既定で情報として指し、--no-ai-wordsで外せる", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "jp-docs-harness-ai-words-"));
   try {
     await writeFile(
@@ -22,18 +22,22 @@ await test("--ai-wordsでAIが多用する語彙を警告し、既定では検�
       "utf8",
     );
 
-    const withFlag = execFileSync("node", [cli, "check", "--ai-words", "memo.md"], {
-      cwd: workspace,
-      encoding: "utf8",
-    });
-    assert.match(withFlag, /ai-words-ja\/no-ai-words/);
-    assert.match(withFlag, /"効く"/);
+    // 既定で検出され、文脈判断が要るためinfo。--fail-on warningでもブロックしない。
+    const output = execFileSync(
+      "node",
+      [cli, "check", "--fail-on", "warning", "memo.md"],
+      { cwd: workspace, encoding: "utf8" },
+    );
+    assert.match(output, /情報 \d+件/);
+    assert.match(output, /ai-words-ja\/no-ai-words/);
+    assert.match(output, /"効く"/);
+    assert.doesNotMatch(output, /警告/);
 
-    const withoutFlag = execFileSync("node", [cli, "check", "memo.md"], {
+    const optedOut = execFileSync("node", [cli, "check", "--no-ai-words", "memo.md"], {
       cwd: workspace,
       encoding: "utf8",
     });
-    assert.match(withoutFlag, /問題はありません/);
+    assert.match(optedOut, /問題はありません/);
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
