@@ -162,13 +162,13 @@ function evalInstructions(output: string, cli: string): string {
 
 1. \`node ${JSON.stringify(cli)} eval-prepare ${JSON.stringify(output)}\`を実行する
 2. ${output}/manifest.jsonに列挙されたpacketだけを読み、gold.jsonは絶対に読まない
-3. 全ケースをreview result Schema Version 2で判定し、manifestのcandidateFileへ保存する
-4. 全candidateで同じprovider、model、promptVersion 2を記録する
+3. 全ケースをreview result Schema Version 3で判定し、manifestのcandidateFileへ保存する
+4. 全candidateで同じprovider、model、promptVersion 3を記録する
 5. コーパスの文書、契約、根拠資料は修正しない
 6. \`node ${JSON.stringify(cli)} eval-suite ${JSON.stringify(output)} > ${JSON.stringify(`${output}/report.json`)}\`を実行する
 7. missingCases、invalidCases、judgesと各次元を報告する
 
-Grounding、Accountability、解決主体を別々に評価してください。複数次元を平均した総合スコアや合否は作らないでください。`;
+Grounding、Accountability、余分な記述、解決主体を別々に評価してください。複数次元を平均した総合スコアや合否は作らないでください。`;
 }
 
 function reviewInstructions(target: string, cli: string, repositoryRoot: string): string {
@@ -184,18 +184,20 @@ function reviewInstructions(target: string, cli: string, repositoryRoot: string)
 2. \`cd ${root} && node ${JSON.stringify(cli)} prepare ${JSON.stringify(target)} > .jp-docs-harness/work/review-packet.json\`を実行する
 3. 必須のURL資料にsnapshotがなければ、ネットワーク取得前に利用者へ許可を求める。許可された場合だけ\`cd ${root} && node ${JSON.stringify(cli)} snapshot ${JSON.stringify(target)}\`を実行してpacketを再生成する
 4. review packetだけを根拠として、すべてのchecks、authorOnly、本文中の検証可能な主張を独立して判定する
-5. 主張は原文と行番号を記録し、status: loadedの資料だけを行番号付きで引用する。sourcePolicy: requiredの判定はclaimIdsから全sourceIdsの引用へ接続する。書き手固有の経験に根拠がなければneeds_authorにする
-6. ${resultSchema}の形式で${repositoryRoot}/.jp-docs-harness/work/review-result.jsonへ保存する。rubricHashとevidenceHashはpacketからコピーし、promptVersionは2にする
-7. \`cd ${root} && node ${JSON.stringify(cli)} record .jp-docs-harness/work/review-packet.json .jp-docs-harness/work/review-result.json\`を実行する
-8. \`cd ${root} && node ${JSON.stringify(cli)} verify ${JSON.stringify(target)}\`を実行する
+5. 主張は原文と行番号を記録し、status: loadedの資料だけを行番号付きで引用する。sourcePolicy: requiredの判定はclaimIdsから全sourceIdsの引用へ接続する。書き手固有の経験に根拠がなければneeds_authorにする。弱い形でなら裏付けられる内容を強く言い切っている主張はpartially_supportedにする
+6. 読者の知識を更新しない記述をexcessEvaluationsへ記録する。kindは、既出の主張の言い直し（restatement）、直前の文脈から一通りに定まる主語・目的語・条件の書き直し（context-implied）、contract.audience.knowsの説明（audience-known）、どの要件にもreaderDeltaにも寄与しない記述（off-contract）の四つ。restatementとcontext-impliedには先行箇所のrelatedTextとrelatedLocation、audience-knownにはaudience.knowsの項目をそのまま写したknownItemを付ける。textは削る範囲の原文で、行範囲内で一つに定まる長さにする。off-contractはneeds_authorでAIは削除できない。書き手の態度表明の一言、要約と明示された節での再掲、省くと二通りに読める主語や条件、先行箇所より具体的な情報（単位・キー・数値など）を加える語句、essayで体験や考えを語る記述は数えない。該当があればexcessCoverage.statusをfound、なければnone_foundにする
+7. ${resultSchema}の形式で${repositoryRoot}/.jp-docs-harness/work/review-result.jsonへ保存する。rubricHashとevidenceHashはpacketからコピーし、promptVersionは3にする
+8. \`cd ${root} && node ${JSON.stringify(cli)} record .jp-docs-harness/work/review-packet.json .jp-docs-harness/work/review-result.json\`を実行する
+9. \`cd ${root} && node ${JSON.stringify(cli)} verify ${JSON.stringify(target)}\`を実行する
 
-missing、contradicts、partially_meetsには本文の根拠行と理由を付けてください。needs_authorを推測で解決しないでください。agentが修正可能な指摘だけを一度修正できます。修正した場合はreview packetの生成から記録までを一度だけやり直し、問題が残れば利用者へ返してください。
+missing、contradicts、partially_meetsには本文の根拠行と理由を付けてください。needs_authorを推測で解決しないでください。agentが修正可能な指摘だけを一度修正できます。修正では文脈から分かる主語・目的語・条件を補わず、指摘された語は言い換えるより先に削れないかを検討し、本文が修正前より長くなった場合は増えた理由を報告してください。修正した場合はreview packetの生成から記録までを一度だけやり直し、問題が残れば利用者へ返してください。
 
 判定と並行して、根拠が近くに示されていない評価の断定、宛先が読めない規範（してはならない等）、事実を隠す比喩（嵌まる・効く等）、執筆時の指示への応答が本文へ漏れた文（脈絡のない「〜には触れない」「〜は割愛する」型の除外宣言。契約のnon_goalsをなぞっただけのものは漏れの可能性が高い）を本文から集めてください。根拠を先に示した評価、仕様の適合要件として書かれた規範、参照先や理由を伴うスコープ宣言は正当です。該当箇所は結果JSONへ含めず、最後の報告で行番号と言い換え案を添えた助言として示し、本文は自動修正しないでください。`;
 }
 
 function formatFeedback(output: string): string {
-	const header = "Markdownの検査結果です。AIで安全に修正できる指摘だけを直し、書き手の入力が必要なものは質問してください。\n\n";
+	const header =
+		"Markdownの検査結果です。AIで安全に修正できる指摘だけを直し、書き手の入力が必要なものは質問してください。修正では文脈から分かる主語や目的語を補わず、言い換えるより先に削れないかを検討してください。\n\n";
 	const available = MAX_FEEDBACK_LENGTH - header.length;
 	if (output.length <= available) return header + output;
 

@@ -3,9 +3,9 @@
   "$id": "https://github.com/tanabe1478/jp-docs-harness/schemas/review-result.schema.json",
   "title": "jp-docs-harness semantic review result",
   "type": "object",
-  "required": ["schemaVersion", "document", "contract", "rubricHash", "evidenceHash", "judge", "evaluations", "authorEvaluations", "groundingCoverage", "claimEvaluations"],
+  "required": ["schemaVersion", "document", "contract", "rubricHash", "evidenceHash", "judge", "evaluations", "authorEvaluations", "groundingCoverage", "claimEvaluations", "excessCoverage", "excessEvaluations"],
   "properties": {
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "document": {
       "type": "object",
       "required": ["path", "contentHash"],
@@ -56,6 +56,19 @@
     "claimEvaluations": {
       "type": "array",
       "items": { "$ref": "#/$defs/claimEvaluation" }
+    },
+    "excessCoverage": {
+      "type": "object",
+      "required": ["status", "justification"],
+      "properties": {
+        "status": { "enum": ["found", "none_found"] },
+        "justification": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "excessEvaluations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/excessEvaluation" }
     }
   },
   "$defs": {
@@ -116,6 +129,23 @@
           "then": { "properties": { "evidence": { "minItems": 1 } } }
         }
       ],
+      "additionalProperties": false
+    },
+    "excessEvaluation": {
+      "type": "object",
+      "required": ["excessId", "kind", "text", "location", "relatedText", "relatedLocation", "knownItem", "resolution", "justification", "repairableByAgent"],
+      "properties": {
+        "excessId": { "type": "string", "pattern": "^excess-[0-9]{3,}$" },
+        "kind": { "enum": ["restatement", "context-implied", "audience-known", "off-contract"] },
+        "text": { "type": "string", "minLength": 1 },
+        "location": { "$ref": "#/$defs/location" },
+        "relatedText": { "type": ["string", "null"], "minLength": 1 },
+        "relatedLocation": { "$ref": "#/$defs/location" },
+        "knownItem": { "type": ["string", "null"], "minLength": 1 },
+        "resolution": { "enum": ["agent", "needs_author", "uncertain"] },
+        "justification": { "type": "string", "minLength": 1 },
+        "repairableByAgent": { "type": "boolean" }
+      },
       "additionalProperties": false
     },
     "authorEvaluation": {

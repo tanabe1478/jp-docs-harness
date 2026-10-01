@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 3,
+  "document": {
+    "path": "eval/cases/token-refresh-worker/document.md",
+    "contentHash": "sha256:9230aed4154e067e6e4468257b5d402a7dc19bc44ee3ab0cbdcb0c78a86d909c"
+  },
+  "contract": {
+    "path": "eval/cases/token-refresh-worker/document.md.intent.yml",
+    "contractHash": "sha256:dfed062e609154b99cb7564780eff36875a1f8583d530b996704fba82eb05663"
+  },
+  "rubricHash": "sha256:29713c462c806b222204f0e085fb8d7f5ff845fef689d4486b10958c65fa909d",
+  "evidenceHash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "judge": {
+    "provider": "human",
+    "model": "gold-label",
+    "promptVersion": "3"
+  },
+  "evaluations": [
+    {
+      "checkId": "critical-001-fact",
+      "verdict": "meets",
+      "resolution": "none",
+      "justification": "本文4行目に、失敗時は指数バックオフで最大3回まで再試行するとある",
+      "location": {
+        "startLine": 4,
+        "endLine": 4
+      },
+      "claimIds": [],
+      "repairableByAgent": false
+    },
+    {
+      "checkId": "critical-002-fact",
+      "verdict": "meets",
+      "resolution": "none",
+      "justification": "本文5行目に、3回失敗すると再ログインが必要な状態に切り替えるとある",
+      "location": {
+        "startLine": 5,
+        "endLine": 5
+      },
+      "claimIds": [],
+      "repairableByAgent": false
+    }
+  ],
+  "authorEvaluations": [],
+  "groundingCoverage": {
+    "status": "reviewed",
+    "justification": "本文の記述を主張単位で確認した"
+  },
+  "claimEvaluations": [
+    {
+      "claimId": "claim-001",
+      "text": "今回の変更では、APIサーバーが期限切れ間近のトークンをキューに登録し、ワーカーがリフレッシュ要求を送って新しいトークンを取得します。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    },
+    {
+      "claimId": "claim-002",
+      "text": "リフレッシュに失敗した場合、ワーカーは指数バックオフで間隔を空けながら最大3回まで再試行します。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 4,
+        "endLine": 4
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    },
+    {
+      "claimId": "claim-003",
+      "text": "3回失敗すると、ワーカーはそのユーザーを再ログインが必要な状態に切り替えます。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 5,
+        "endLine": 5
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    }
+  ],
+  "excessCoverage": {
+    "status": "found",
+    "justification": "読者が知っているトークンリフレッシュと指数バックオフの説明と、直前の文で示した動作主の繰り返しがある"
+  },
+  "excessEvaluations": [
+    {
+      "excessId": "excess-001",
+      "kind": "context-implied",
+      "text": "ワーカーは指数バックオフで",
+      "location": {
+        "startLine": 4,
+        "endLine": 4
+      },
+      "relatedText": "ワーカーがリフレッシュ要求を送って",
+      "relatedLocation": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "knownItem": null,
+      "resolution": "agent",
+      "justification": "再試行する主体は3行目でリフレッシュ要求を送ったワーカーであり、主語を省いても読み違えない",
+      "repairableByAgent": true
+    },
+    {
+      "excessId": "excess-002",
+      "kind": "audience-known",
+      "text": "で間隔を空けながら",
+      "location": {
+        "startLine": 4,
+        "endLine": 4
+      },
+      "relatedText": null,
+      "relatedLocation": null,
+      "knownItem": "指数バックオフ",
+      "resolution": "agent",
+      "justification": "間隔を空けながら再試行することは指数バックオフの意味そのもので、読者は知っている",
+      "repairableByAgent": true
+    },
+    {
+      "excessId": "excess-003",
+      "kind": "context-implied",
+      "text": "ワーカーはそのユーザーを",
+      "location": {
+        "startLine": 5,
+        "endLine": 5
+      },
+      "relatedText": "ワーカーがリフレッシュ要求を送って",
+      "relatedLocation": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "knownItem": null,
+      "resolution": "agent",
+      "justification": "状態を切り替える主体は3行目から続くワーカーであり、主語を省いても読み違えない",
+      "repairableByAgent": true
+    },
+    {
+      "excessId": "excess-004",
+      "kind": "audience-known",
+      "text": "要求を送って新しいトークンを取得",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "relatedText": null,
+      "relatedLocation": null,
+      "knownItem": "認証トークンのリフレッシュ",
+      "resolution": "agent",
+      "justification": "リフレッシュ要求を送って新しいトークンを取得することはリフレッシュの意味そのもので、読者は知っている",
+      "repairableByAgent": true
+    }
+  ]
+}

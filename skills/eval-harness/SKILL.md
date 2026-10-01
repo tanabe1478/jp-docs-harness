@@ -16,17 +16,18 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-review-cli.mjs" eval-prepare "$ARGUME
 
 ## Candidate生成
 
-各packetについて`review-docs`と同じ判定規則を適用し、manifestの`candidateFile`へreview result Schema Version 2のJSONを書いてください。
+各packetについて`review-docs`と同じ判定規則を適用し、manifestの`candidateFile`へreview result Schema Version 3のJSONを書いてください。
 
 - すべてのchecksを独立して評価する
 - authorOnlyを全件評価する
 - 外部検証可能な主張と書き手固有の経験を抽出する
 - loadedの資料だけを根拠として引用する
 - sourcePolicyがrequiredの判定をclaimIdsから指定資料へ接続する
+- 余分な記述を抽出し、kindごとに必須の参照を付ける
 - needs_authorをAIが解決できる問題へ変更しない
 - document、contract、rubricHash、evidenceHashをpacketからそのままコピーする
 - 全ケースで同じprovider、model、promptVersionをjudgeへ記録する
-- promptVersionは`2`とする
+- promptVersionは`3`とする
 
 評価中にコーパスの文書、契約、根拠資料を修正してはいけません。candidateの判定を良く見せるための本文修正も禁止します。
 
@@ -49,6 +50,8 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-review-cli.mjs" eval-suite "$ARGUMENT
 - groundingExtraction
 - groundingVerdict
 - groundingResolution
+- excessCoverage
+- excessExtraction
 - missingCases
 - invalidCases
 - judges

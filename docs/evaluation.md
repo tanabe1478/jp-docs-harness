@@ -17,8 +17,12 @@ jp-docs-harness eval eval/cases/grounding-basic/gold.json candidate.json
 | `groundingExtraction` | 主張抽出のprecisionとrecall |
 | `groundingVerdict` | 根拠充足判定の一致率 |
 | `groundingResolution` | 根拠問題の解決主体に関する一致率 |
+| `excessCoverage` | 余分な記述の有無に関する一致率 |
+| `excessExtraction` | 余分な記述の抽出のprecisionとrecall |
 
 主張はIDではなく、本文の行範囲と原文で対応付けます。Judge間で連番が異なっても、同じ主張なら比較できます。
+
+余分な記述は行範囲と種類で対応付けます。削る範囲をJudgeが語句で切り出すか文で切り出すかは揺れるため、原文の一致は求めません。
 
 ## 同梱コーパス
 
@@ -29,6 +33,12 @@ jp-docs-harness eval eval/cases/grounding-basic/gold.json candidate.json
 | `grounding-basic` | 根拠と一致する数値主張 |
 | `grounding-conflict` | 根拠資料と矛盾する数値主張 |
 | `author-experience` | AIが確認できない書き手固有の経験 |
+| `blacklist-syntax` | 既出の主張の言い直し |
+| `token-refresh-worker` | 直前の文から分かる主語の再明示と、読者が知っている用語の説明 |
+| `lint-command` | 文書の目的に寄与しない教訓 |
+| `token-refresh-dedup` | 余分な記述がなく、書き手の態度表明を含む対照 |
+
+`blacklist-syntax`、`token-refresh-worker`、`lint-command`、`token-refresh-dedup`の本文は[nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)のZenn記事とテストコーパスからの抜粋を元にしています（MIT License, Copyright (c) 2026 nanaism）。`token-refresh-worker`は同リポジトリのスキルが書き直した出力で、`token-refresh-dedup`は書き直し前の出力に対照用の一文を加えたものです。
 
 コーパス自体の比較処理は次で確認できます。
 

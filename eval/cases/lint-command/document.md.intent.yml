@@ -1,0 +1,15 @@
+version: 1
+profile: technical-explainer
+
+audience:
+  problem: yomiyasu_lint.pyの実行方法が分からない
+
+reader_delta:
+  know: []
+  decide: []
+  do:
+    - yomiyasu_lint.pyでMarkdownファイルを検査する
+
+requirements:
+  critical:
+    - yomiyasu_lint.pyの実行コマンド

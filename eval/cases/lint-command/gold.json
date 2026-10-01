@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 3,
+  "document": {
+    "path": "eval/cases/lint-command/document.md",
+    "contentHash": "sha256:36c2051cf60f9990bc05ef8373a540aca4a51fa23fdcf678c1b11798aae792a6"
+  },
+  "contract": {
+    "path": "eval/cases/lint-command/document.md.intent.yml",
+    "contractHash": "sha256:47e83bee92f7b0f1bd0474264440cdab7ed41545e30d0d2a171064ae1d13aaf2"
+  },
+  "rubricHash": "sha256:98fd229f9f251b4281f7a06f21ebc45d8853ff1ff2f77de82622006b436f7fd1",
+  "evidenceHash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "judge": {
+    "provider": "human",
+    "model": "gold-label",
+    "promptVersion": "3"
+  },
+  "evaluations": [
+    {
+      "checkId": "critical-001-fact",
+      "verdict": "meets",
+      "resolution": "none",
+      "justification": "本文6行目のコードブロックに実行コマンドがある",
+      "location": {
+        "startLine": 6,
+        "endLine": 6
+      },
+      "claimIds": [],
+      "repairableByAgent": false
+    }
+  ],
+  "authorEvaluations": [],
+  "groundingCoverage": {
+    "status": "reviewed",
+    "justification": "本文の記述を主張単位で確認した"
+  },
+  "claimEvaluations": [
+    {
+      "claimId": "claim-001",
+      "text": "次のコマンドで、Markdownファイルを静的検査します。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    },
+    {
+      "claimId": "claim-002",
+      "text": "文章を書くときに生じる本来の思考の摩擦を、AIに丸投げして消し去ってはなりません。",
+      "kind": "recommendation",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 9,
+        "endLine": 9
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    }
+  ],
+  "excessCoverage": {
+    "status": "found",
+    "justification": "9行目が実行方法という文書の目的に寄与しない"
+  },
+  "excessEvaluations": [
+    {
+      "excessId": "excess-001",
+      "kind": "off-contract",
+      "text": "文章を書くときに生じる本来の思考の摩擦を、AIに丸投げして消し去ってはなりません。",
+      "location": {
+        "startLine": 9,
+        "endLine": 9
+      },
+      "relatedText": null,
+      "relatedLocation": null,
+      "knownItem": null,
+      "resolution": "needs_author",
+      "justification": "実行方法を知りたい読者の理解・判断・行動のどれにも寄与しない。削るか、契約に目的を加えるかは書き手が決める",
+      "repairableByAgent": false
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+version: 1
+profile: technical-explainer
+
+audience:
+  problem: 禁止語を増やしてもAIの文章が読みやすくならない理由が分からない
+
+reader_delta:
+  know:
+    - 単語を置き換えても統語構造は変わらないこと
+  decide: []
+  do: []
+
+requirements:
+  critical:
+    - 単語を置き換えても文章の統語構造は変わらない

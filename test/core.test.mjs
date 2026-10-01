@@ -298,12 +298,12 @@ evidence:
       });
     const [packet] = await prepare();
     const result = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       document: { path: packet.document.path, contentHash: packet.document.contentHash },
       contract: { path: packet.contract.path, contractHash: packet.contract.contractHash },
       rubricHash: packet.rubric.rubricHash,
       evidenceHash: packet.grounding.evidenceHash,
-      judge: { provider: "test", model: "test-model", promptVersion: "2" },
+      judge: { provider: "test", model: "test-model", promptVersion: "3" },
       evaluations: packet.rubric.checks.map((check, index) => ({
         checkId: check.id,
         verdict: index === 0 ? "missing" : "meets",
@@ -324,6 +324,8 @@ evidence:
         justification: "外部検証可能な主張はない",
       },
       claimEvaluations: [],
+      excessCoverage: { status: "none_found", justification: "余分な記述はない" },
+      excessEvaluations: [],
     };
 
     await recordReviewResult({
@@ -412,12 +414,12 @@ evidence:
     assert.equal(packet.grounding.sources[0].status, "loaded");
     assert.equal(packet.rubric.checks[0].sourcePolicy, "required");
     const result = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       document: { path: packet.document.path, contentHash: packet.document.contentHash },
       contract: { path: packet.contract.path, contractHash: packet.contract.contractHash },
       rubricHash: packet.rubric.rubricHash,
       evidenceHash: packet.grounding.evidenceHash,
-      judge: { provider: "test", model: "test-model", promptVersion: "2" },
+      judge: { provider: "test", model: "test-model", promptVersion: "3" },
       evaluations: packet.rubric.checks.map((check) => ({
         checkId: check.id,
         verdict: "meets",
@@ -445,6 +447,8 @@ evidence:
           repairableByAgent: false,
         },
       ],
+      excessCoverage: { status: "none_found", justification: "余分な記述はない" },
+      excessEvaluations: [],
     };
     const unlinked = structuredClone(result);
     unlinked.evaluations[0].claimIds = [];
@@ -478,6 +482,193 @@ evidence:
     });
     assert.equal(stale.status, "stale");
     assert.ok(stale.reasons.some((reason) => reason.includes("evidenceHash")));
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+await test("余分な記述の評価は先行箇所と契約に照らして検証され、検査結果に出る", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "jp-docs-excess-"));
+  try {
+    await writeFile(
+      path.join(cwd, "refresh.md"),
+      [
+        "# リフレッシュ",
+        "ワーカーがトークンを更新します。",
+        "失敗した場合、ワーカーは指数バックオフで間隔を空けながら再試行します。",
+        "ワーカーがトークンを更新するのです。",
+        "これからもこの設計を大切にしていきます。",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      path.join(cwd, "refresh.md.intent.yml"),
+      `version: 1
+profile: technical-explainer
+audience:
+  knows: [指数バックオフ]
+  problem: リフレッシュの流れが分からない
+reader_delta:
+  know: [リフレッシュの流れ]
+  decide: []
+  do: []
+requirements:
+  critical: [失敗したら再試行する]
+`,
+    );
+    const [packet] = await prepareReviewPackets({
+      yaml,
+      Ajv,
+      cwd,
+      files: ["refresh.md"],
+      intentSchemaPath: path.join(projectRoot, "schemas", "intent.schema.json"),
+    });
+    const excess = (fields) => ({
+      relatedText: null,
+      relatedLocation: null,
+      knownItem: null,
+      resolution: "agent",
+      justification: "削っても読者が得る内容は変わらない",
+      repairableByAgent: true,
+      ...fields,
+    });
+    const result = {
+      schemaVersion: 3,
+      document: { path: packet.document.path, contentHash: packet.document.contentHash },
+      contract: { path: packet.contract.path, contractHash: packet.contract.contractHash },
+      rubricHash: packet.rubric.rubricHash,
+      evidenceHash: packet.grounding.evidenceHash,
+      judge: { provider: "test", model: "test-model", promptVersion: "3" },
+      evaluations: packet.rubric.checks.map((check) => ({
+        checkId: check.id,
+        verdict: "meets",
+        resolution: "none",
+        justification: "本文の3行目で確認できる",
+        location: { startLine: 3, endLine: 3 },
+        claimIds: [],
+        repairableByAgent: false,
+      })),
+      authorEvaluations: [],
+      groundingCoverage: { status: "no_verifiable_claims", justification: "検証可能な主張はない" },
+      claimEvaluations: [],
+      excessCoverage: { status: "found", justification: "言い直しと契約外の記述がある" },
+      excessEvaluations: [
+        excess({
+          excessId: "excess-001",
+          kind: "restatement",
+          text: "ワーカーがトークンを更新するのです。",
+          location: { startLine: 4, endLine: 4 },
+          relatedText: "ワーカーがトークンを更新します。",
+          relatedLocation: { startLine: 2, endLine: 2 },
+        }),
+        excess({
+          excessId: "excess-002",
+          kind: "context-implied",
+          text: "ワーカーは",
+          location: { startLine: 3, endLine: 3 },
+          relatedText: "ワーカーが",
+          relatedLocation: { startLine: 2, endLine: 2 },
+        }),
+        excess({
+          excessId: "excess-003",
+          kind: "audience-known",
+          text: "で間隔を空けながら",
+          location: { startLine: 3, endLine: 3 },
+          knownItem: "指数バックオフ",
+        }),
+        excess({
+          excessId: "excess-004",
+          kind: "off-contract",
+          text: "これからもこの設計を大切にしていきます。",
+          location: { startLine: 5, endLine: 5 },
+          resolution: "needs_author",
+          repairableByAgent: false,
+        }),
+      ],
+    };
+    const record = (candidate) =>
+      recordReviewResult({
+        cwd,
+        packet,
+        result: candidate,
+        Ajv,
+        reviewPacketSchemaPath: path.join(projectRoot, "schemas", "review-packet.schema.json"),
+        reviewResultSchemaPath: path.join(projectRoot, "schemas", "review-result.schema.json"),
+      });
+    const rejects = async (mutate, pattern) => {
+      const candidate = structuredClone(result);
+      mutate(candidate);
+      await assert.rejects(record(candidate), pattern);
+    };
+
+    await rejects((candidate) => {
+      candidate.excessEvaluations[0].relatedLocation = null;
+    }, /restatementには先行箇所のrelatedTextとrelatedLocationが必要です/);
+    await rejects((candidate) => {
+      // 後ろにある文を先行箇所として指すことはできない。
+      candidate.excessEvaluations[1].relatedText = "ワーカーがトークンを更新するのです。";
+      candidate.excessEvaluations[1].relatedLocation = { startLine: 4, endLine: 4 };
+    }, /relatedTextは余分な記述より前にある必要があります/);
+    await rejects((candidate) => {
+      candidate.excessEvaluations[0].relatedLocation = { startLine: 2, endLine: 99 };
+    }, /relatedLocationが本文の行数を超えています/);
+    await rejects((candidate) => {
+      candidate.excessEvaluations[1].text = "ワーカー";
+      candidate.excessEvaluations[1].location = { startLine: 2, endLine: 4 };
+      candidate.excessEvaluations[1].relatedLocation = { startLine: 2, endLine: 2 };
+    }, /textが指定された本文行に複数あります/);
+    await rejects((candidate) => {
+      candidate.excessEvaluations[2].knownItem = "キュー";
+    }, /knownItemは文書契約のaudience.knowsから選んでください/);
+    await rejects((candidate) => {
+      candidate.excessEvaluations[3].resolution = "agent";
+      candidate.excessEvaluations[3].repairableByAgent = true;
+    }, /契約外の記述はneeds_authorにしてください.*契約外の記述はAIが削除できません/);
+    await rejects((candidate) => {
+      candidate.excessCoverage.status = "none_found";
+    }, /余分な記述なしと余分な記述の評価を同時に記録できません/);
+
+    await record(result);
+    const harnessResult = await runHarness({
+      textlint,
+      yaml,
+      Ajv,
+      cwd,
+      files: ["refresh.md"],
+      configFilePath: path.join(projectRoot, ".textlintrc.json"),
+      nodeModulesDir: path.join(projectRoot, "node_modules"),
+    });
+    const excessFindings = harnessResult.report.findings
+      .filter((finding) => finding.ruleId.startsWith("excess/"))
+      .sort((a, b) => a.ruleId.localeCompare(b.ruleId));
+    assert.deepEqual(
+      excessFindings.map((finding) => [finding.ruleId, finding.severity, finding.resolution]),
+      [
+        ["excess/excess-001", "warning", "agent"],
+        ["excess/excess-002", "info", "agent"],
+        ["excess/excess-003", "warning", "agent"],
+        ["excess/excess-004", "info", "needs_author"],
+      ],
+    );
+    assert.match(excessFindings[0].message, /2行目「ワーカーがトークンを更新します。」/);
+
+    // 余分な記述の評価を持たない旧形式の結果は、無効ではなくレビューのやり直しとして扱う。
+    const legacy = structuredClone(result);
+    legacy.schemaVersion = 2;
+    delete legacy.excessCoverage;
+    delete legacy.excessEvaluations;
+    await writeFile(
+      path.join(cwd, ".jp-docs-harness", "reviews", "refresh.md.review.json"),
+      `${JSON.stringify(legacy, null, 2)}\n`,
+    );
+    const stale = await inspectStoredReview({
+      cwd,
+      packet,
+      Ajv,
+      reviewResultSchemaPath: path.join(projectRoot, "schemas", "review-result.schema.json"),
+    });
+    assert.equal(stale.status, "stale");
+    assert.match(stale.reasons[0], /Schema Version 2/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -612,7 +803,7 @@ await test("evalはJudge結果を単一スコアにせず次元別に比較す�
     contract: { path: "doc.md.intent.yml", contractHash: `sha256:${"b".repeat(64)}` },
     rubricHash: `sha256:${"c".repeat(64)}`,
     evidenceHash: `sha256:${"d".repeat(64)}`,
-    judge: { provider: "test", model: "gold", promptVersion: "2" },
+    judge: { provider: "test", model: "gold", promptVersion: "3" },
     evaluations: [
       { checkId: "check-1", verdict: "meets", resolution: "none" },
       { checkId: "check-2", verdict: "missing", resolution: "agent" },
@@ -628,13 +819,24 @@ await test("evalはJudge結果を単一スコアにせず次元別に比較す�
         resolution: "none",
       },
     ],
+    excessCoverage: { status: "found" },
+    excessEvaluations: [
+      { excessId: "excess-001", kind: "restatement", location: { startLine: 5, endLine: 5 } },
+      { excessId: "excess-002", kind: "audience-known", location: { startLine: 7, endLine: 7 } },
+    ],
   };
   const candidate = structuredClone(base);
   candidate.evaluations[1].verdict = "partially_meets";
   candidate.claimEvaluations[0].verdict = "unsupported";
+  // 語句の切り出し方が違っても、同じ行範囲と種類なら同じ指摘として数える。
+  candidate.excessEvaluations[0].text = "別の切り出し方";
+  candidate.excessEvaluations[1].kind = "context-implied";
   const report = compareReviewResults(base, candidate);
   assert.equal(report.dimensions.rubricVerdict.accuracy, 0.5);
   assert.equal(report.dimensions.groundingVerdict.accuracy, 0);
+  assert.equal(report.dimensions.excessCoverage.accuracy, 1);
+  assert.equal(report.dimensions.excessExtraction.precision, 0.5);
+  assert.equal(report.dimensions.excessExtraction.recall, 0.5);
   assert.equal("score" in report, false);
 });
 
@@ -651,21 +853,25 @@ await test("eval suiteはpacketを生成しcandidateを次元別に集計する"
       Ajv,
       intentSchemaPath: path.join(projectRoot, "schemas", "intent.schema.json"),
     });
-    assert.equal(manifest.cases.length, 3);
+    assert.equal(manifest.cases.length, 7);
     for (const item of manifest.cases) {
       const gold = await readFile(path.join(corpusRoot, item.id, "gold.json"), "utf8");
       await writeFile(path.join(outputDir, item.candidateFile), gold);
     }
     const report = await evaluateCorpusRun({ corpusRoot, candidateDir: outputDir });
-    assert.equal(report.corpus.evaluatedCases, 3);
+    assert.equal(report.corpus.evaluatedCases, 7);
     assert.equal(report.corpus.missingCases.length, 0);
     assert.equal(report.corpus.mixedJudges, false);
     assert.equal(report.dimensions.groundingVerdict.accuracy, 1);
+    assert.equal(report.dimensions.excessExtraction.recall, 1);
+    assert.equal(report.dimensions.excessExtraction.precision, 1);
     assert.equal("score" in report, false);
     const regressed = structuredClone(report);
     regressed.dimensions.groundingVerdict.accuracy = 0.5;
+    regressed.dimensions.excessExtraction.recall = 0.5;
     const diff = compareRunReports(report, regressed);
     assert.equal(diff.dimensions.groundingVerdict.delta, -0.5);
+    assert.equal(diff.dimensions.excessExtraction.recall.delta, -0.5);
     assert.equal("score" in diff, false);
   } finally {
     await rm(outputDir, { recursive: true, force: true });

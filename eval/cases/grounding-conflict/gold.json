@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "document": {
     "path": "eval/cases/grounding-conflict/document.md",
     "contentHash": "sha256:57692e1c05aa15d47f60c2bfcaf38a3cd62647e1c269453ed9337e1ddcf9ae90"
@@ -13,7 +13,7 @@
   "judge": {
     "provider": "human",
     "model": "gold-label",
-    "promptVersion": "2"
+    "promptVersion": "3"
   },
   "evaluations": [
     {
@@ -57,5 +57,10 @@
       ],
       "repairableByAgent": true
     }
-  ]
+  ],
+  "excessCoverage": {
+    "status": "none_found",
+    "justification": "本文は一文だけで、既出の言い直しや契約外の記述がない"
+  },
+  "excessEvaluations": []
 }

@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 3,
+  "document": {
+    "path": "eval/cases/blacklist-syntax/document.md",
+    "contentHash": "sha256:9e2ae9be1ea4cb0ebec71f0af200fb309bd15a5b487fbf8b42bb58d663600308"
+  },
+  "contract": {
+    "path": "eval/cases/blacklist-syntax/document.md.intent.yml",
+    "contractHash": "sha256:f6435c2b39e1deae4a9f10501bc7331ece1fcaacd76389d1e8f06c32658cde3d"
+  },
+  "rubricHash": "sha256:63811e00a74c88e83630fd97a8a0da63e587a5f7bff509656a0bf1661420c83f",
+  "evidenceHash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "judge": {
+    "provider": "human",
+    "model": "gold-label",
+    "promptVersion": "3"
+  },
+  "evaluations": [
+    {
+      "checkId": "critical-001-fact",
+      "verdict": "meets",
+      "resolution": "none",
+      "justification": "本文3行目に、単語を変えても統語構造は変わらないとある",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "claimIds": [],
+      "repairableByAgent": false
+    }
+  ],
+  "authorEvaluations": [],
+  "groundingCoverage": {
+    "status": "reviewed",
+    "justification": "本文の記述を主張単位で確認した"
+  },
+  "claimEvaluations": [
+    {
+      "claimId": "claim-001",
+      "text": "単語の表面だけをモグラ叩きのように変えても、文章の骨格や統語構造（=Syntax）はまったく変わりません。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    },
+    {
+      "claimId": "claim-002",
+      "text": "Syntaxが壊れているのに、単語だけを変えても、読みにくさの本質は何ひとつ変わらないのです。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 5,
+        "endLine": 5
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    }
+  ],
+  "excessCoverage": {
+    "status": "found",
+    "justification": "5行目が3行目の主張を言い直している"
+  },
+  "excessEvaluations": [
+    {
+      "excessId": "excess-001",
+      "kind": "restatement",
+      "text": "Syntaxが壊れているのに、単語だけを変えても、読みにくさの本質は何ひとつ変わらないのです。",
+      "location": {
+        "startLine": 5,
+        "endLine": 5
+      },
+      "relatedText": "単語の表面だけをモグラ叩きのように変えても、文章の骨格や統語構造（=Syntax）はまったく変わりません。",
+      "relatedLocation": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "knownItem": null,
+      "resolution": "agent",
+      "justification": "単語を変えても構造は変わらないという3行目の主張を繰り返しており、削っても読者が得る内容は変わらない",
+      "repairableByAgent": true
+    }
+  ]
+}

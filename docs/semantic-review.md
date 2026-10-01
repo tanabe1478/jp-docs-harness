@@ -1,6 +1,6 @@
 # 意味レビューの記録と検証
 
-review packetとreview resultの現在の`schemaVersion`は`2`です。Version 1の保存結果はGrounding情報を持たないため、prepareとレビューをやり直してください。
+review packetの現在の`schemaVersion`は`2`、review resultは`3`です。Version 1の保存結果はGrounding情報を、Version 2の保存結果は余分な記述の評価を持ちません。`verify`はこれらを`stale`として扱うため、prepareとレビューをやり直してください。
 
 ## 処理の流れ
 
@@ -26,7 +26,7 @@ review packetの`rubric.checks`に、独立して判定するチェックが入�
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "document": {
     "path": "docs/design.md",
     "contentHash": "sha256:..."
@@ -40,7 +40,7 @@ review packetの`rubric.checks`に、独立して判定するチェックが入�
   "judge": {
     "provider": "anthropic",
     "model": "claude-sonnet",
-    "promptVersion": "1"
+    "promptVersion": "3"
   },
   "evaluations": [
     {
@@ -81,6 +81,24 @@ review packetの`rubric.checks`に、独立して判定するチェックが入�
         { "sourceId": "benchmark", "startLine": 4, "endLine": 4 }
       ],
       "repairableByAgent": false
+    }
+  ],
+  "excessCoverage": {
+    "status": "found",
+    "justification": "24行目が20行目の測定結果を言い直している"
+  },
+  "excessEvaluations": [
+    {
+      "excessId": "excess-001",
+      "kind": "restatement",
+      "text": "つまり、p95でも100msに収まっています。",
+      "location": { "startLine": 24, "endLine": 24 },
+      "relatedText": "p95の応答時間は100msです。",
+      "relatedLocation": { "startLine": 20, "endLine": 20 },
+      "knownItem": null,
+      "resolution": "agent",
+      "justification": "20行目の測定結果を繰り返しており、削っても読者が得る内容は変わらない",
+      "repairableByAgent": true
     }
   ]
 }
@@ -140,7 +158,7 @@ jp-docs-harness verify docs/design.md
 | --- | --- |
 | `fresh` | 本文、契約、チェック一覧が保存結果と一致する |
 | `missing` | 保存結果がない |
-| `stale` | 本文または契約が変更されている |
+| `stale` | 本文または契約が変更されている、または旧Schema Versionで保存されている |
 | `invalid` | Schema違反やチェックの過不足がある |
 
 `contracted`と`strict`モードでは、有効な文書契約がある文書に`fresh`な結果を要求します。
@@ -164,6 +182,29 @@ review packetの`grounding.sources`には、契約で宣言したローカル資
 | `not_applicable` | 外部根拠を必要としない |
 
 `record`は主張の原文が指定された本文行に存在すること、引用先IDが宣言済みであること、根拠行が資料の範囲内であることを検証します。`external`、`missing`、`missing-snapshot`、`invalid-snapshot`の資料は引用できません。Evidence gateは、必須資料がこれらの状態なら意味レビュー前にfindingを生成します。
+
+## 余分な記述
+
+レビューは要件ごとに「本文は〜を明示しているか」を問うため、指摘を直す方向は書き足すことに偏ります。書き足しだけを繰り返すと文書は長くなり続けるため、読者の知識を更新しない記述を`excessEvaluations`へ記録し、削る方向の指摘も出します。
+
+何が余分かは文書契約で決まります。Judgeは本文を一文ずつ読み、`reader_delta`と要件に照らして、削っても読者が得る内容が変わらない記述を次の種類で挙げます。
+
+| kind | 対象 | 解決主体 |
+| --- | --- | --- |
+| `restatement` | 本文で既に述べた主張の言い直し | `agent` |
+| `context-implied` | 直前の文脈から一通りに定まる主語・目的語・条件の書き直し | `agent` |
+| `audience-known` | 契約の`audience.knows`に挙げた内容の説明 | `agent` |
+| `off-contract` | どの要件にも`reader_delta`にも寄与しない記述 | `needs_author` |
+
+`off-contract`をAIに削らせないのは、本文が余分なのか契約に要件が漏れているのかを書き手しか決められないためです。書き手の態度表明の一言、要約と明示された節での再掲、省くと二通りに読める主語や条件、先行箇所より具体的な情報を加える語句、`essay`で体験や考えを語る記述は余分に数えません。
+
+`record`は次を検証します。
+
+- `text`が指定された本文行に一つだけある
+- `restatement`と`context-implied`は先行箇所の`relatedText`と`relatedLocation`を持ち、その箇所が`text`より前にある
+- `audience-known`の`knownItem`が契約の`audience.knows`にある
+- `off-contract`が`needs_author`で、AIによる修正を不可にしている
+- `excessCoverage.status`が`found`なら評価が一件以上あり、`none_found`なら一件もない
 
 ## エージェントから実行する
 
@@ -192,5 +233,8 @@ pi packageでは、次のコマンドを使用します。
 - author-onlyの`missing`は`needs_author`のerror
 - 根拠と矛盾する主張はerror
 - 根拠のない書き手固有の経験は`needs_author`のerror
+- 既出の主張の言い直しと、読者が知っている内容の説明はwarning
+- 文脈から分かる語の書き直しはinfo。読む負担が語句単位で小さいため
+- 契約外の記述は`needs_author`のinfo。契約側の漏れの可能性があるため
 
 これにより、Surface、Contract、Freshness、Semanticの結果を同じJSONレポートで扱えます。

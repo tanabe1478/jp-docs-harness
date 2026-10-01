@@ -1,0 +1,19 @@
+version: 1
+profile: technical-explainer
+
+audience:
+  knows:
+    - 指数バックオフ
+    - 認証トークンのリフレッシュ
+  problem: 変更後にトークンのリフレッシュがどう処理されるか分からない
+
+reader_delta:
+  know:
+    - 変更後のリフレッシュ処理の流れ
+  decide: []
+  do: []
+
+requirements:
+  critical:
+    - リフレッシュに失敗したら指数バックオフで最大3回まで再試行する
+    - 再試行の上限に達したらユーザーを再ログインが必要な状態にする

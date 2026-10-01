@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 3,
+  "document": {
+    "path": "eval/cases/token-refresh-dedup/document.md",
+    "contentHash": "sha256:fd2edd88cb9944d153c4ea4d3c1baeb5fe606e56285859f84a0fb9b4dede9450"
+  },
+  "contract": {
+    "path": "eval/cases/token-refresh-dedup/document.md.intent.yml",
+    "contractHash": "sha256:00a21af011df0203cf03a6541979deb5708f7d651473800f2d7551f550d120d0"
+  },
+  "rubricHash": "sha256:d578c864720c9392bd9a3f5d0417fa84cf18642ea034063b857696bf211a21e8",
+  "evidenceHash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "judge": {
+    "provider": "human",
+    "model": "gold-label",
+    "promptVersion": "3"
+  },
+  "evaluations": [
+    {
+      "checkId": "critical-001-fact",
+      "verdict": "meets",
+      "resolution": "none",
+      "justification": "本文5行目に、失敗時は指数バックオフで最大3回まで再試行するとある",
+      "location": {
+        "startLine": 5,
+        "endLine": 5
+      },
+      "claimIds": [],
+      "repairableByAgent": false
+    },
+    {
+      "checkId": "critical-002-fact",
+      "verdict": "meets",
+      "resolution": "none",
+      "justification": "本文6行目に、上限に達したら再ログインを促す状態へ遷移させるとある",
+      "location": {
+        "startLine": 6,
+        "endLine": 6
+      },
+      "claimIds": [],
+      "repairableByAgent": false
+    },
+    {
+      "checkId": "valuable-001-fact",
+      "verdict": "meets",
+      "resolution": "none",
+      "justification": "本文4行目に、同一ユーザーのジョブを重複排除するとある",
+      "location": {
+        "startLine": 4,
+        "endLine": 4
+      },
+      "claimIds": [],
+      "repairableByAgent": false
+    }
+  ],
+  "authorEvaluations": [],
+  "groundingCoverage": {
+    "status": "reviewed",
+    "justification": "本文の記述を主張単位で確認した"
+  },
+  "claimEvaluations": [
+    {
+      "claimId": "claim-001",
+      "text": "今回の変更では、期限切れが近いトークンをキューに登録し、ワーカーがリフレッシュを処理します。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 3,
+        "endLine": 3
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    },
+    {
+      "claimId": "claim-002",
+      "text": "同一ユーザーのジョブはユーザーID単位で重複排除します。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 4,
+        "endLine": 4
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    },
+    {
+      "claimId": "claim-003",
+      "text": "失敗した場合は指数バックオフで最大3回まで再試行します。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 5,
+        "endLine": 5
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    },
+    {
+      "claimId": "claim-004",
+      "text": "上限に達したときは、再ログインを促す状態へ遷移させます。",
+      "kind": "factual",
+      "verdict": "unsupported",
+      "resolution": "uncertain",
+      "justification": "契約に根拠資料がなく、本文の記述を確認できない",
+      "location": {
+        "startLine": 6,
+        "endLine": 6
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    },
+    {
+      "claimId": "claim-005",
+      "text": "地味な変更ですが、個人的には一番うれしい改善です。",
+      "kind": "author-experience",
+      "verdict": "unsupported",
+      "resolution": "needs_author",
+      "justification": "書き手の感想であり、本文以外に確認できる根拠がない",
+      "location": {
+        "startLine": 7,
+        "endLine": 7
+      },
+      "evidence": [],
+      "repairableByAgent": false
+    }
+  ],
+  "excessCoverage": {
+    "status": "none_found",
+    "justification": "各文が処理の流れに新しい情報を加えている。7行目は書き手の態度表明で余分な記述に数えない"
+  },
+  "excessEvaluations": []
+}

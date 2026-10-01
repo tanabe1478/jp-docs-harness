@@ -98,11 +98,40 @@ review packetだけを判定材料として使用してください。本文生�
 
 本文中の外部検証可能な事実、推奨、書き手固有の経験を主張単位で抽出し、`claimEvaluations`へ記録してください。検証可能な主張を確認した場合は`groundingCoverage.status`を`reviewed`にします。該当する主張が本当にない場合だけ`no_verifiable_claims`とし、理由を書きます。本文の主張は`text`へ原文のままコピーし、`location`を付けます。
 
-`grounding.sources`のうち`status: loaded`の資料だけを根拠として引用でき、引用には資料の行範囲が必要です。根拠がない主張は`unsupported`、一部だけ裏付けられる場合は`partially_supported`、資料と矛盾する場合は`conflicts`です。URLだけの資料や欠落した資料を読んだことにしてはいけません。
+`grounding.sources`のうち`status: loaded`の資料だけを根拠として引用でき、引用には資料の行範囲が必要です。根拠がない主張は`unsupported`、一部だけ裏付けられる場合は`partially_supported`、資料と矛盾する場合は`conflicts`です。弱い形でなら裏付けられる内容を強く言い切っている主張も、言い切った強さの分だけ根拠が足りないため`partially_supported`にしてください。URLだけの資料や欠落した資料を読んだことにしてはいけません。
 
 `sourcePolicy: required`のチェックを`meets`、`partially_meets`、`contradicts`にする場合は、そのチェックの`claimIds`から指定された全`sourceIds`の引用へ到達できるようにしてください。根拠不要または`missing`のチェックでは`claimIds`を空配列にできます。書き手固有の経験を裏付けられない場合は`needs_author`とし、AIによる修正を不可にしてください。
 
-結果を[`schemas/review-result.schema.json`](${CLAUDE_PLUGIN_ROOT}/schemas/review-result.schema.json)に適合するJSONとして、`<REPO_ROOT>/.jp-docs-harness/work/review-result.json`へ保存してください。`document`、`contract`、`rubricHash`、`evidenceHash`はreview packetからそのままコピーします。`judge`には現在のproviderとmodelが分かる場合は記録し、分からない場合は`current-agent`とします。`promptVersion`は`2`です。
+## 余分な記述
+
+本文を一文ずつ読み、読者の知識を更新しない記述を`excessEvaluations`へ記録してください。基準は文書契約です。読後に得てほしい理解・判断・行動（`contract.readerDelta`）と要件（`rubric`）に照らし、削っても読者が得る内容が変わらない記述だけを挙げます。
+
+種類は次の四つです。
+
+| kind | 対象 | 必須の参照 |
+| --- | --- | --- |
+| `restatement` | 本文で既に述べた主張を言い直している文 | 先行箇所の`relatedText`と`relatedLocation` |
+| `context-implied` | 直前の文脈から一通りに定まる主語・目的語・条件を書き直している語句 | 文脈を与えている先行箇所の`relatedText`と`relatedLocation` |
+| `audience-known` | 読者が知っていること（`contract.audience.knows`）を説明している記述 | `knownItem`に`audience.knows`の項目をそのまま写す |
+| `off-contract` | どの要件にも`readerDelta`にも寄与しない記述 | なし |
+
+`text`には削る範囲を原文のまま写し、`location`の行範囲内で一つに定まる長さにしてください。`relatedText`は`text`より前になければなりません。参照を持たない種類では`relatedText`、`relatedLocation`、`knownItem`を`null`にします。
+
+次は余分な記述に数えないでください。
+
+- 書き手の態度表明。本文の内容に対する感想や評価を短く添えた一言は、読者に書き手の立場を伝えます
+- TL;DRやまとめのように、要約と明示された節での要点の再掲
+- 誤読を防ぐために必要な主語や条件。省くと指す先が二通り以上に読める場合は残します
+- 先行箇所より具体的な情報（単位、キー、数値、範囲など）を加えている語句。先行箇所から一通りに定まらないため、文脈から分かる語には当たりません
+- profileが`essay`の文書で、書き手の体験や考えを語る記述
+
+`restatement`、`context-implied`、`audience-known`は`resolution: agent`、`repairableByAgent: true`にでき、修正では該当範囲を削ります。`off-contract`は`resolution: needs_author`、`repairableByAgent: false`にしてください。本文が余分なのか契約に要件が漏れているのかは、書き手しか決められないためです。
+
+余分な記述があれば`excessCoverage.status`を`found`、なければ`none_found`とし、理由を書きます。
+
+## 結果の保存
+
+結果を[`schemas/review-result.schema.json`](${CLAUDE_PLUGIN_ROOT}/schemas/review-result.schema.json)に適合するJSONとして、`<REPO_ROOT>/.jp-docs-harness/work/review-result.json`へ保存してください。`document`、`contract`、`rubricHash`、`evidenceHash`はreview packetからそのままコピーします。`judge`には現在のproviderとmodelが分かる場合は記録し、分からない場合は`current-agent`とします。`promptVersion`は`3`です。
 
 ## 表現の警戒
 
@@ -130,6 +159,12 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/claude-review-cli.mjs" verify "<TARGET>"
 ## 修正と報告
 
 `resolution: agent`かつ`repairableByAgent: true`の指摘だけを修正できます。`needs_author`は本文を変更せず、必要な入力を利用者へ質問してください。`uncertain`は断定へ変えず、不確実な理由を伝えてください。
+
+本文を修正するときは、次を守ってください。
+
+- 文脈から分かる主語・目的語・条件を補わない。不足の指摘は、欠けている情報だけを足して解消する
+- 指摘された語は、言い換えるより先に、その語や文を削れないかを検討する
+- 修正後の本文が修正前より長くなった場合は、増えた理由を最後の報告に書く
 
 本文を修正した場合、review packetと結果は古くなります。修正後にprepare、判定、record、verifyを一度だけやり直してください。二回目にも問題が残る場合は自動修正を繰り返さず、未解決の指摘を利用者へ返してください。
 
