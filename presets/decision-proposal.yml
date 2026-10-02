@@ -1,0 +1,29 @@
+# 設計や方針の提案。読者が提案を採るかどうかを決められる材料をそろえる。
+name: decision-proposal
+title: 設計・方針の提案
+use_when: 設計、構成、方針を提案し、読者に採否や未決事項を決めてもらう
+profile: decision-proposal
+reader_delta_hints:
+  know:
+    - 提案する結論と、それを選んだ理由
+  decide:
+    - 提案を採るかどうか
+    - 決まっていない論点をどう決めるか
+  do:
+    - 採用した場合に最初の作業へ着手する
+author_only_hints:
+  - 結論を選んだ判断の理由
+  - 検討して採らなかった案と、その理由
+requirements:
+  critical:
+    - 提案する結論
+    - 結論を選んだ理由と、その根拠
+    - 検討した代替案と、採らなかった理由
+    - 決まっていない論点
+  valuable:
+    - 前提と制約
+    - 影響範囲とコスト
+    - 最初に着手する作業
+  context:
+    - 参考にした資料
+non_goals: []

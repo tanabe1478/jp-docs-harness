@@ -1,0 +1,23 @@
+# 手順書・導入ガイド。読者が手順を最後まで実行し、できたことを確かめられるようにする。
+name: tutorial
+title: 手順書・導入ガイド
+use_when: 読者に、導入や作業の手順を実行してもらう
+profile: tutorial
+reader_delta_hints:
+  know: []
+  decide: []
+  do:
+    - 手順を最後まで実行する
+author_only_hints:
+  - 書き手が実際に手順を実行した環境
+requirements:
+  critical:
+    - 始める前の前提条件
+    - 順序どおりの手順
+    - 完了したことの確かめ方
+  valuable:
+    - 失敗したときの戻し方
+    - よくある失敗と対処
+  context:
+    - 手順の背景にある仕組みの参照先
+non_goals: []

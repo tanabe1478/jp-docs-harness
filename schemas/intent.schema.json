@@ -9,6 +9,10 @@
     "profile": {
       "enum": ["technical-explainer", "tutorial", "decision-proposal", "essay", "reference"]
     },
+    "preset": {
+      "description": "契約を作るときに要件の観点を借りた文書種別のプリセット",
+      "enum": ["meeting-notes", "decision-proposal", "technical-explainer", "tutorial"]
+    },
     "audience": {
       "type": "object",
       "required": ["problem"],

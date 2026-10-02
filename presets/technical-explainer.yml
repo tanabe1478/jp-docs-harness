@@ -1,0 +1,24 @@
+# 技術解説・調査結果。読者の疑問に答え、答えが成り立つ条件まで示す。
+name: technical-explainer
+title: 技術解説・調査結果
+use_when: 仕組み、仕様、調査結果を説明し、読者の疑問に答える
+profile: technical-explainer
+reader_delta_hints:
+  know:
+    - 読者の疑問に対する答え
+  decide:
+    - その答えを自分の状況に当てはめてよいか
+  do: []
+author_only_hints:
+  - 書き手が実際に試した、または調べた結果
+requirements:
+  critical:
+    - 読者の疑問に対する答え
+    - 答えの根拠（仕様、測定、出典）
+    - 答えが成り立つ条件と限界
+  valuable:
+    - 具体例
+    - 誤解しやすい点
+  context:
+    - 前提知識の参照先
+non_goals: []

@@ -1,6 +1,10 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  describeDocumentContract,
+  recordContractConfirmation,
+} from "../lib/core/contract-confirmation.mjs";
 import { compareRunReports } from "../lib/eval/compare-run-reports.mjs";
 import { evaluateCorpusRun, prepareCorpusRun } from "../lib/eval/corpus-run.mjs";
 import { prepareReviewPackets } from "../lib/semantic/prepare-review.mjs";
@@ -66,6 +70,17 @@ try {
       !report.corpus.mixedJudges
         ? 0
         : 1;
+  } else if (command === "contract") {
+    if (args.length !== 1) fail("contractにはMarkdownファイルを1件指定してください");
+    const contract = await describeDocumentContract({ cwd, file: args[0], yaml, Ajv, intentSchemaPath });
+    process.stdout.write(`${contract.summary}\n`);
+  } else if (command === "confirm") {
+    if (args.length !== 1) fail("confirmにはMarkdownファイルを1件指定してください");
+    const contract = await describeDocumentContract({ cwd, file: args[0], yaml, Ajv, intentSchemaPath });
+    const { confirmationPath } = await recordContractConfirmation({ cwd, ...contract });
+    process.stdout.write(
+      `${contract.contractPath}を確認済みにしました: ${path.relative(cwd, confirmationPath).split(path.sep).join("/")}\n`,
+    );
   } else if (command === "prepare") {
     if (args.length !== 1) fail("prepareにはMarkdownファイルを1件指定してください");
     const [packet] = await prepareReviewPackets({ cwd, files: args, yaml, Ajv, intentSchemaPath });

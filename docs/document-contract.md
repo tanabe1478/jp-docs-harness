@@ -43,6 +43,40 @@ requirements:
 
 `critical`、`valuable`、`context`は、型付きメタルーブリックを導入しやすくするための簡略記法です。コンパイラは各文字列を`Simple Knowledge`として扱います。
 
+## 契約の作り方と確認
+
+契約は本文から独立した判定基準です。本文から逆算した契約は本文の要約になり、意味レビューは本文から抜けている内容を判定できなくなります。そのため、読者（`audience`）、読後の変化（`reader_delta`）、書き手にしか書けない情報（`evidence.author_only`）は書き手が決め、エージェントは質問して聞き取ります。要件（`requirements`）は、エージェントが書き手の答えとプリセットの観点から組み立てます。
+
+`plan-docs`と、契約がない状態の`review-docs`は、文書の種類、読後に得てほしいこと、読者、書き手にしか書けない情報をAskUserQuestionで一度に質問します。組み立てた契約の要約を示し、書き手が確定した場合だけ確認を記録します。
+
+```console
+jp-docs-harness contract docs/design.md
+jp-docs-harness confirm docs/design.md
+```
+
+`contract`は要約と確認状態を表示し、`confirm`は確認を記録します。本文がまだなくても使えます。確認は`.jp-docs-harness/contracts/<Markdownのパス>.confirmation.json`へ契約の内容ハッシュと一緒に保存されます。確認後に契約を書き換えると、状態は`確認後に変更`になります。
+
+| 状態 | 意味 |
+| --- | --- |
+| `confirmed` | 書き手が現在の契約を確認した |
+| `unconfirmed` | 確認の記録がない |
+| `changed` | 確認後に契約が変更された |
+
+エージェントの判断で`confirm`を実行することは手順で禁じていますが、CLIの実行そのものは技術的に防げません。piでは、利用者が`/confirm-contract`を実行し、確認ダイアログで承認した場合だけ記録します。
+
+## プリセット
+
+`preset`には、契約を作るときに要件の観点を借りた文書種別を記録します。プリセットは`presets/`に同梱しています。
+
+| preset | 用途 | profile |
+| --- | --- | --- |
+| `meeting-notes` | 会議・1on1の記録と振り返り | `reference` |
+| `decision-proposal` | 設計・方針の提案 | `decision-proposal` |
+| `technical-explainer` | 技術解説・調査結果 | `technical-explainer` |
+| `tutorial` | 手順書・導入ガイド | `tutorial` |
+
+各プリセットは、種類ごとの定石の観点（`requirements`）と、読後の変化や書き手にしか書けない情報の候補（`reader_delta_hints`、`author_only_hints`）を持ちます。観点はそのまま要件にせず、書き手の答えを使って文書向けに具体化します。契約はプリセットを参照せず自己完結するため、プリセットを更新しても既存の契約は変わりません。
+
 ## 型付き要件
 
 GAMUTを参考にした型付き要件もSchemaで定義しています。
@@ -128,9 +162,9 @@ snapshotは1 MiB以下のUTF-8テキストだけを受け入れます。localhos
 
 | モード | 現在の動作 |
 | --- | --- |
-| `manual` | 存在する契約を検証し、契約がない文書は許可する |
-| `contracted` | 存在する契約を検証し、契約がない文書は許可する |
-| `strict` | すべての対象Markdownに有効な契約を要求する |
+| `manual` | 存在する契約を検証し、契約がない文書は許可する。確認状態は表示だけにする |
+| `contracted` | 存在する契約を検証し、契約がない文書は許可する。未確認の契約は警告する |
+| `strict` | すべての対象Markdownに有効な契約を要求する。未確認の契約はエラーにする |
 
 ```console
 npx jp-docs-harness lint --review-mode strict docs/design.md

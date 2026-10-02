@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 import Ajv from "ajv/dist/2020.js";
 import * as textlint from "textlint";
 import * as yaml from "yaml";
+import {
+  describeDocumentContract,
+  recordContractConfirmation,
+} from "../lib/core/contract-confirmation.mjs";
 import { compareReviewResults } from "../lib/eval/compare-review-results.mjs";
 import { compareRunReports } from "../lib/eval/compare-run-reports.mjs";
 import { evaluateCorpusRun, prepareCorpusRun } from "../lib/eval/corpus-run.mjs";
@@ -45,6 +49,28 @@ try {
       intentSchemaPath,
     });
     process.stdout.write(`${JSON.stringify(packets[0], null, 2)}\n`);
+    process.exit(0);
+  }
+
+  if (options.command === "contract") {
+    if (options.files.length !== 1) throw new Error("contractにはMarkdownファイルを1件指定してください");
+    const contract = await describeDocumentContract({ cwd, file: options.files[0], yaml, Ajv, intentSchemaPath });
+    if (options.format === "json") {
+      const { summary, ...status } = contract;
+      process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
+    } else {
+      process.stdout.write(`${contract.summary}\n`);
+    }
+    process.exit(0);
+  }
+
+  if (options.command === "confirm") {
+    if (options.files.length !== 1) throw new Error("confirmにはMarkdownファイルを1件指定してください");
+    const contract = await describeDocumentContract({ cwd, file: options.files[0], yaml, Ajv, intentSchemaPath });
+    const { confirmationPath } = await recordContractConfirmation({ cwd, ...contract });
+    process.stdout.write(
+      `${contract.contractPath}を確認済みにしました: ${path.relative(cwd, confirmationPath).split(path.sep).join("/")}\n`,
+    );
     process.exit(0);
   }
 
@@ -198,6 +224,8 @@ function parseArguments(args) {
   const knownCommands = new Set([
     "check",
     "lint",
+    "contract",
+    "confirm",
     "prepare",
     "snapshot",
     "record",
@@ -274,5 +302,5 @@ function parseArguments(args) {
 }
 
 function printHelp() {
-  process.stdout.write(`jp-docs-harness [check] [options] [files...]\n\nまず試す:\n  jp-docs-harness README.md\n  jp-docs-harness check docs/design.md\n\n主なコマンド:\n  check [files...]         文書を検査する（既定）\n  lint [files...]          checkの互換名\n  verify <file>            保存済み意味レビューの鮮度を確認する\n\n意味レビューの内部コマンド:\n  prepare <file>           review packetを生成する\n  snapshot <file>          URL根拠資料をローカルへ保存する\n  record <packet> <result> レビュー結果を検証して保存する\n\nJudge評価:\n  eval <gold> <candidate>  Judge結果を次元別に比較する\n  eval-prepare <dir>       同梱コーパスのreview packetを生成する\n  eval-suite <dir>         candidate一式をコーパスと比較する\n  eval-diff <base> <new>   二つのrun reportを次元別に比較する\n\nオプション:\n  --format <stylish|json>                  出力形式を指定する\n  --json                                   --format jsonの短縮形\n  --review-mode <manual|contracted|strict> 文書契約の適用方法を指定する\n  --bold <forbid|moderate|allow>           太字の扱いを指定する（既定は太字なし）\n  --reading-load                           読解負荷（長文・二重否定・の連鎖）も指す\n  --no-ai-words                            AIが多用する語彙の検査を外す（業務用語と衝突する場合）\n  --fail-on <error|warning>                終了コード1にする重要度を指定する\n  --output <path>                          recordの保存先を指定する\n  -h, --help                               ヘルプを表示する\n\n既定では表現上の警告だけなら終了コード0、契約違反などのエラーがあれば終了コード1です。\nCIで警告も許さない場合は--fail-on warningを指定します。\n`);
+  process.stdout.write(`jp-docs-harness [check] [options] [files...]\n\nまず試す:\n  jp-docs-harness README.md\n  jp-docs-harness check docs/design.md\n\n主なコマンド:\n  check [files...]         文書を検査する（既定）\n  lint [files...]          checkの互換名\n  verify <file>            保存済み意味レビューの鮮度を確認する\n  contract <file>          文書契約の要約と確認状態を表示する\n  confirm <file>           書き手が確認した文書契約として記録する\n\n意味レビューの内部コマンド:\n  prepare <file>           review packetを生成する\n  snapshot <file>          URL根拠資料をローカルへ保存する\n  record <packet> <result> レビュー結果を検証して保存する\n\nJudge評価:\n  eval <gold> <candidate>  Judge結果を次元別に比較する\n  eval-prepare <dir>       同梱コーパスのreview packetを生成する\n  eval-suite <dir>         candidate一式をコーパスと比較する\n  eval-diff <base> <new>   二つのrun reportを次元別に比較する\n\nオプション:\n  --format <stylish|json>                  出力形式を指定する\n  --json                                   --format jsonの短縮形\n  --review-mode <manual|contracted|strict> 文書契約の適用方法を指定する\n  --bold <forbid|moderate|allow>           太字の扱いを指定する（既定は太字なし）\n  --reading-load                           読解負荷（長文・二重否定・の連鎖）も指す\n  --no-ai-words                            AIが多用する語彙の検査を外す（業務用語と衝突する場合）\n  --fail-on <error|warning>                終了コード1にする重要度を指定する\n  --output <path>                          recordの保存先を指定する\n  -h, --help                               ヘルプを表示する\n\n既定では表現上の警告だけなら終了コード0、契約違反などのエラーがあれば終了コード1です。\nCIで警告も許さない場合は--fail-on warningを指定します。\n`);
 }

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tanabe1478/jp-docs-harness/schemas/contract-confirmation.schema.json",
+  "title": "jp-docs-harness contract confirmation",
+  "type": "object",
+  "required": ["schemaVersion", "document", "contract", "confirmedAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "document": { "type": "string", "minLength": 1 },
+    "contract": {
+      "type": "object",
+      "required": ["path", "contractHash"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "contractHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "confirmedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

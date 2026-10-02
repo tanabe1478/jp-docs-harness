@@ -1,0 +1,25 @@
+# 会議・1on1の記録と振り返り。決まったことと次の行動を、後から参照できる形で残す。
+name: meeting-notes
+title: 会議・1on1の記録と振り返り
+use_when: 会議や1on1の内容を、参加者や自分が後から参照するために残す
+profile: reference
+reader_delta_hints:
+  know:
+    - 会議で決まったこと
+  decide: []
+  do:
+    - 決まった次の行動を、担当と期限に沿って実行する
+author_only_hints:
+  - 会議で示された内容に対する書き手自身の解釈
+requirements:
+  critical:
+    - 会議の日付、形式、参加者
+    - 決まったこと
+    - 次の行動を、やること・担当・期限が分かる形で
+  valuable:
+    - 決まらなかった論点と、その扱い
+    - 会議で示された内容と、書き手の解釈の区別
+  context:
+    - 元資料（議事メモや文字起こし）の所在
+non_goals:
+  - 会議の逐語記録を残すこと

@@ -20,7 +20,8 @@
             "properties": {
               "path": { "type": "string", "minLength": 1 },
               "status": { "enum": ["missing", "valid", "invalid"] },
-              "contractHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+              "contractHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+              "confirmation": { "enum": ["confirmed", "unconfirmed", "changed"] }
             },
             "additionalProperties": false
           },

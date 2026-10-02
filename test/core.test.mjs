@@ -651,6 +651,8 @@ requirements:
       ],
     );
     assert.match(excessFindings[0].message, /2行目「ワーカーがトークンを更新します。」/);
+    // 書き手が契約を確認していないため、判定の基準が未確認であることを示す。
+    assert.ok(excessFindings.every((finding) => finding.message.startsWith("（未確認の契約に基づく）")));
 
     // 余分な記述の評価を持たない旧形式の結果は、無効ではなくレビューのやり直しとして扱う。
     const legacy = structuredClone(result);
@@ -790,8 +792,15 @@ requirements:
       configFilePath: path.join(projectRoot, ".textlintrc.json"),
       nodeModulesDir: path.join(projectRoot, "node_modules"),
     });
-    assert.equal(result.report.findings[0].ruleId, "freshness/missing");
+    assert.deepEqual(
+      result.report.findings.map((finding) => [finding.ruleId, finding.severity]),
+      [
+        ["contract/unconfirmed", "warning"],
+        ["freshness/missing", "error"],
+      ],
+    );
     assert.equal(result.report.documents[0].review.status, "missing");
+    assert.equal(result.report.documents[0].contract.confirmation, "unconfirmed");
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -880,6 +889,7 @@ await test("eval suiteはpacketを生成しcandidateを次元別に集計する"
 
 await test("公開するJSON Schemaは有効なJSONである", async () => {
   for (const file of [
+    "contract-confirmation.schema.json",
     "eval-run.schema.json",
     "evidence-lock.schema.json",
     "finding.schema.json",

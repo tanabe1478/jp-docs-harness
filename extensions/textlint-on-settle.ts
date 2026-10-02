@@ -1,9 +1,14 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import Ajv from "ajv/dist/2020.js";
 import * as textlint from "textlint";
 import * as yaml from "yaml";
+import {
+	describeDocumentContract,
+	recordContractConfirmation,
+} from "../lib/core/contract-confirmation.mjs";
 import { resolveDocumentScope } from "../lib/core/document-scope.mjs";
 import { runHarness } from "../lib/run-harness.mjs";
 
@@ -16,6 +21,9 @@ type ScopePromptContext = {
 		input(title: string, placeholder?: string): Promise<string | undefined>;
 	};
 };
+
+const intentSchemaPath = path.join(packageRoot, "schemas", "intent.schema.json");
+const presetsDir = path.join(packageRoot, "presets");
 
 export default function textlintOnSettle(pi: ExtensionAPI) {
 	pi.registerCommand("check-docs", {
@@ -75,6 +83,56 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 		},
 	});
 
+	pi.registerCommand("plan-docs", {
+		description: "これから書くMarkdownの文書契約を書き手と決める",
+		handler: async (args, ctx) => {
+			try {
+				let target = args.trim();
+				if (!target) {
+					target = (await ctx.ui.input("これから書く文書", "Markdownファイルのパス"))?.trim() ?? "";
+				}
+				if (!target) return;
+				const scope = resolveContractScope(ctx.cwd, target);
+				const cli = path.join(packageRoot, "bin", "jp-docs-harness.mjs");
+				pi.sendUserMessage(planInstructions(scope.file, cli, scope.cwd));
+			} catch (error) {
+				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
+			}
+		},
+	});
+
+	// 確認は利用者が確認ダイアログで承認したときだけ記録する。
+	// AIへ指示を送るだけの他のコマンドと違い、ここではAIが確認を代行できない。
+	pi.registerCommand("confirm-contract", {
+		description: "文書契約の要約を確かめ、書き手が確認した契約として記録する",
+		handler: async (args, ctx) => {
+			try {
+				let target = args.trim();
+				if (!target) {
+					target = (await ctx.ui.input("確認する文書", "Markdownファイルのパス"))?.trim() ?? "";
+				}
+				if (!target) return;
+				const scope = resolveContractScope(ctx.cwd, target);
+				const contract = await describeDocumentContract({
+					cwd: scope.cwd,
+					file: scope.file,
+					yaml,
+					Ajv,
+					intentSchemaPath,
+				});
+				const approved = await ctx.ui.confirm("この文書契約で確定しますか", contract.summary);
+				if (!approved) {
+					ctx.ui.notify("文書契約は未確認のままです。直したい点をAIへ伝えてください", "info");
+					return;
+				}
+				await recordContractConfirmation({ cwd: scope.cwd, ...contract });
+				ctx.ui.notify(`${contract.contractPath}を確認済みにしました`, "info");
+			} catch (error) {
+				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
+			}
+		},
+	});
+
 	pi.registerCommand("review-docs", {
 		description: "Markdownの目的、完全性、根拠を意味レビューする",
 		handler: async (args, ctx) => {
@@ -96,6 +154,24 @@ export default function textlintOnSettle(pi: ExtensionAPI) {
 			}
 		},
 	});
+}
+
+// 書く前の文書も扱えるよう、本文ではなく文書の置き場所から境界を決める。
+function resolveContractScope(projectDir: string, target: string) {
+	const absoluteTarget = path.resolve(projectDir, target);
+	if (existsSync(absoluteTarget)) {
+		const scope = resolveDocumentScope({ projectDir, target });
+		if (scope.files.length !== 1) throw new Error("Markdownファイルを一件指定してください");
+		return { cwd: scope.cwd, file: scope.files[0] };
+	}
+	const directory = path.dirname(absoluteTarget);
+	let root = directory;
+	try {
+		root = resolveDocumentScope({ projectDir, target: path.relative(projectDir, directory) || "." }).cwd;
+	} catch {
+		// Gitに属さないディレクトリでは、文書を置くディレクトリを境界にする。
+	}
+	return { cwd: root, file: path.relative(root, absoluteTarget).split(path.sep).join("/") };
 }
 
 async function resolveCheckScope(ctx: ScopePromptContext, target: string) {
@@ -171,12 +247,39 @@ function evalInstructions(output: string, cli: string): string {
 Grounding、Accountability、余分な記述、解決主体を別々に評価してください。複数次元を平均した総合スコアや合否は作らないでください。`;
 }
 
+// 契約の作り方はplan-docsとreview-docsで共通にする。
+function contractInstructions(target: string, cli: string, repositoryRoot: string): string {
+	const root = JSON.stringify(repositoryRoot);
+	return `文書契約は本文から独立した判定基準です。本文から契約を逆算してはいけません。逆算した契約は本文の要約になり、本文から抜けている内容を判定できないためです。
+
+契約がなければ、${presetsDir}の各プリセットを読み、利用者へ次の四つを質問して答えを待ってください。候補は依頼内容とプリセットのヒントから作り、本文の見出しを並べ直しただけの候補にしないでください。
+
+1. 文書の種類: 各プリセットのtitleから選ぶか、当てはまらなければ自由に答えてもらう
+2. 読後: 読んだ人に、何を分かって、決めて、してほしいか
+3. 読者: 主な読者は誰で、何をすでに知っているか
+4. 書き手だけ: 書き手にしか書けない経験や判断理由で、必ず入れたいものはあるか
+
+答えから契約を組み立て、${repositoryRoot}/${target}.intent.ymlへ書いてください。reader_deltaは「読後」、audienceは「読者」、evidence.author_onlyは「書き手だけ」の答えから作ります。requirementsは選んだプリセットの観点を書き手の答えで具体化したもので、本文にあるという理由だけで要件にしてはいけません。profileとpresetはプリセットの値にします。書き手の経験や動機を推測してauthor_onlyへ足してはいけません。
+
+契約を書いたら、または既存の契約があれば、\`cd ${root} && node ${JSON.stringify(cli)} contract ${JSON.stringify(target)}\`で要約を表示してください。1行目が確認済みでなければ、要約を利用者へ示し、確定するなら\`/confirm-contract ${target}\`を実行するよう依頼してください。確認の記録はその確認ダイアログでだけ行い、AIが代わりにconfirmを実行してはいけません。直したい点を伝えられたらその点だけを反映し、要約を示し直してください。利用者が確認せずに進めると答えた場合は、未確認のまま進め、以後の判定が未確認の契約に基づくことを報告してください。`;
+}
+
+function planInstructions(target: string, cli: string, repositoryRoot: string): string {
+	return `これから書く文書${target}の文書契約を、書き手と決めてください。作業ディレクトリは${repositoryRoot}です。本文はまだなくて構いません。既存の契約がある場合は、利用者が見直しを求めた点だけを変更してください。
+
+${contractInstructions(target, cli, repositoryRoot)}
+
+利用者が執筆も依頼している場合は、確定した契約を執筆の指示書として扱ってください。requirements.criticalをすべて含め、author_onlyは書き手から聞いた内容だけで書き、non_goalsは書かず、audience.knowsにあることは説明せず、reader_deltaに寄与しない段落を足さないでください。書き終えたら/review-docsで確かめられることを伝えてください。`;
+}
+
 function reviewInstructions(target: string, cli: string, repositoryRoot: string): string {
 	const resultSchema = path.resolve(path.dirname(cli), "..", "schemas", "review-result.schema.json");
 	const root = JSON.stringify(repositoryRoot);
 	return `${target}を意味レビューしてください。作業ディレクトリは${repositoryRoot}です。
 
-最初に対象本文を読み、文書契約${target}.intent.ymlが存在するか確認してください。契約がなければ、本文と現在の利用者の依頼から、想定読者、読後に得てほしい理解・判断・行動、欠かせない内容を抽出し、最小の文書契約を作成してください。目的を合理的に特定できる場合は確認を挟まず進め、結果の冒頭で採用した前提を短く示してください。目的によって評価が大きく変わる場合だけ、利用者へ一つの簡潔な質問をしてください。書き手の経験や動機を推測してauthor_onlyへ追加してはいけません。契約を作成した場合は、そのパスと下書きであることを報告してください。
+最初に対象本文を読み、文書契約${target}.intent.ymlが存在するか確認してください。
+
+${contractInstructions(target, cli, repositoryRoot)}
 
 契約を用意した後は、次の手順を守ってください。
 
