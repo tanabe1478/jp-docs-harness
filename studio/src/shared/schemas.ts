@@ -33,12 +33,22 @@ export const reflectionSchema = z.object({
 });
 export type Reflection = z.infer<typeof reflectionSchema>;
 
+// AIへ添えた参考資料の記録。内容そのものではなく、名前・ハッシュ・字数だけを残す。
+export const sentReferenceSchema = z.object({
+  name: z.string(),
+  hash: z.string(),
+  chars: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+});
+export type SentReference = z.infer<typeof sentReferenceSchema>;
+
 export const turnSchema = z.object({
   id: z.string(),
   role: z.enum(["author", "ai"]),
   text: z.string(),
   createdAt: z.string(),
   reflection: reflectionSchema.optional(),
+  references: z.array(sentReferenceSchema).optional(),
 });
 export type Turn = z.infer<typeof turnSchema>;
 
@@ -100,15 +110,49 @@ export type DocumentPayload = {
   modifiedAt: string;
 };
 
-export type AiConfig =
-  | { configured: true; provider: string; model: string }
-  | { configured: false; provider: null; model: null; reason: string };
+export type AiMode = "chatgpt" | "openai-api";
+
+export type AiLoginState = { state: "idle" } | { state: "pending"; authUrl: string } | { state: "failed"; error: string };
+
+// 画面に出す AI の状態。秘密値は含めない。
+export type AiConfig = (
+  | { configured: true; provider: string; model: string; reason?: undefined }
+  | { configured: false; provider: null; model: null; reason: string }
+) & {
+  // false のときは設定を画面から変えられない（テスト用の固定構成など）。
+  manageable: boolean;
+  loggedIn: boolean;
+  apiKeyAvailable: boolean;
+  settings: { model: string | null; mode: AiMode | null };
+  overriddenByEnv: { model: boolean; mode: boolean };
+  login: AiLoginState;
+};
 
 export type StudioConfig = {
   workspaceName: string;
   ai: AiConfig;
+  // ネイティブ版（Tauri）の中で動いているか。
+  native: boolean;
   harness: { available: boolean; reason?: string };
   dataLocation: string;
+};
+
+// 参考資料。workspace 内のファイルか、ネイティブ版のファイル選択で書き手が選んだ外部ファイル。
+export const referenceRecordSchema = z.object({
+  id: z.string(),
+  documentPath: z.string(),
+  kind: z.enum(["workspace", "external"]),
+  path: z.string(),
+  name: z.string(),
+  include: z.boolean(),
+  addedAt: z.string(),
+});
+export type ReferenceRecord = z.infer<typeof referenceRecordSchema>;
+
+export type ReferenceView = ReferenceRecord & {
+  available: boolean;
+  chars: number | null;
+  problem?: string;
 };
 
 export type SentScope = {
@@ -117,6 +161,7 @@ export type SentScope = {
   selectionChars: number;
   contextChars: number;
   turns: number;
+  references: SentReference[];
 };
 
 export type HarnessFinding = {
@@ -184,6 +229,25 @@ export const insightRequest = z.object({
 export const proposalDecisionRequest = z.object({
   decision: z.enum(["accepted", "rejected"]),
   expectedHash: z.string().regex(hashPattern),
+});
+
+export const addReferenceRequest = z.object({
+  path: z.string().min(1).max(1024),
+  file: z.string().min(1).max(1024),
+});
+
+export const nativeReferencesRequest = z.object({
+  path: z.string().min(1).max(1024),
+  files: z.array(z.string().min(1).max(4096)).min(1).max(20),
+});
+
+export const referenceUpdateRequest = z.object({
+  include: z.boolean(),
+});
+
+export const aiSettingsRequest = z.object({
+  model: z.string().min(1).max(200).nullable().optional(),
+  mode: z.enum(["chatgpt", "openai-api"]).nullable().optional(),
 });
 
 export const checkRequest = z.object({

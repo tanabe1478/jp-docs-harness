@@ -238,7 +238,7 @@ export function DocumentsView(props: Parameters<typeof DocumentList>[0] & { onCl
   );
 }
 
-export function AiUnconfiguredView({ reason, onClose }: { reason: string; onClose(): void }) {
+export function AiUnconfiguredView({ reason, onClose, onOpenSettings }: { reason: string; onClose(): void; onOpenSettings?: () => void }) {
   return (
     <Panel title="この箇所について" onClose={onClose} testId="ai-unconfigured">
       <div className="notice" role="alert">
@@ -249,6 +249,11 @@ export function AiUnconfiguredView({ reason, onClose }: { reason: string; onClos
         ChatGPT のサブスクリプションで使う場合は、studio ディレクトリで npm run login を実行してログインします。OpenAI API を使う場合は OPENAI_API_KEY を設定します。どちらも JP_DOCS_STUDIO_MODEL にモデル名を指定し、Studio のサーバーを起動し直してください。
       </p>
       <p className="small">OpenAI API の利用は、ChatGPT の有料プランとは別に課金されます。</p>
+      {onOpenSettings ? (
+        <button type="button" className="btn primary" onClick={onOpenSettings}>
+          AIを設定する
+        </button>
+      ) : null}
       <p className="small">執筆・保存・検査は、AIを設定しなくてもこのまま使えます。</p>
     </Panel>
   );

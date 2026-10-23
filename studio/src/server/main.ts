@@ -2,7 +2,8 @@ import { parseArgs } from "node:util";
 import { startStudioServer } from "./app.ts";
 import { FileCredentialStore, credentialFilePath } from "./persistence/credential-store.ts";
 import { defaultDataRoot } from "./persistence/data-dir.ts";
-import { resolveAiAdapter } from "./providers/resolve.ts";
+import { settingsFilePath } from "./persistence/settings.ts";
+import { createAiManager } from "./providers/ai-manager.ts";
 import { resolveWorkspaceRoot } from "./security/workspace.ts";
 
 const DEFAULT_PORT = 4873;
@@ -29,13 +30,22 @@ async function main() {
   const port = values.port === undefined ? DEFAULT_PORT : Number(values.port);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error(`--port が不正です: ${values.port}`);
 
+  // ネイティブ版の外側が渡すトークン。検査の子プロセスなどへ引き継がないよう、読んだら消す。
+  const nativeToken = process.env.JP_DOCS_STUDIO_NATIVE_TOKEN || undefined;
+  delete process.env.JP_DOCS_STUDIO_NATIVE_TOKEN;
+
   const dataRoot = defaultDataRoot();
-  const ai = await resolveAiAdapter({ credentials: new FileCredentialStore(credentialFilePath(dataRoot)) });
+  const ai = await createAiManager({
+    dataRoot,
+    credentials: new FileCredentialStore(credentialFilePath(dataRoot)),
+    settingsFile: settingsFilePath(dataRoot),
+  });
+  const aiStatus = await ai.status();
   const studio = await startStudioServer({
     workspaceRoot,
     dataRoot,
-    adapter: ai.adapter,
-    ...(ai.reason ? { adapterReason: ai.reason } : {}),
+    ai,
+    ...(nativeToken ? { nativeToken } : {}),
     port,
     client: values.dev ? "dev" : "static",
   });
@@ -46,7 +56,7 @@ async function main() {
       "  jp-docs Studio",
       `  URL:        ${studio.url}`,
       `  workspace:  ${workspaceRoot}`,
-      `  AI:         ${ai.adapter ? `${ai.adapter.provider} / ${ai.adapter.model}` : `未設定（${ai.reason}）`}`,
+      `  AI:         ${aiStatus.configured ? `${aiStatus.provider} / ${aiStatus.model}` : `未設定（${aiStatus.reason}）`}`,
       "",
     ].join("\n") + "\n",
   );

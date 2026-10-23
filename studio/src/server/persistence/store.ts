@@ -4,9 +4,11 @@ import { z } from "zod";
 import {
   insightSchema,
   proposalRecordSchema,
+  referenceRecordSchema,
   threadRecordSchema,
   type Insight,
   type ProposalRecord,
+  type ReferenceRecord,
   type ThreadRecord,
 } from "../../shared/schemas.ts";
 import { StudioError } from "../errors.ts";
@@ -20,6 +22,8 @@ const storeSchema = z.object({
   threads: z.array(threadRecordSchema),
   insights: z.array(insightSchema),
   proposals: z.array(proposalRecordSchema),
+  // 参考資料は後から加えた項目。古いデータには無いため空として読む。
+  references: z.array(referenceRecordSchema).default([]),
 });
 
 export type StoreData = {
@@ -28,6 +32,7 @@ export type StoreData = {
   threads: ThreadRecord[];
   insights: Insight[];
   proposals: ProposalRecord[];
+  references: ReferenceRecord[];
 };
 
 export type Store = {
@@ -48,7 +53,7 @@ export async function openStore(directory: string, workspaceRoot: string): Promi
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
   if (source === undefined) {
-    data = { schemaVersion: STORE_SCHEMA_VERSION, workspaceRoot, threads: [], insights: [], proposals: [] };
+    data = { schemaVersion: STORE_SCHEMA_VERSION, workspaceRoot, threads: [], insights: [], proposals: [], references: [] };
   } else {
     // 壊れたメタデータを空で上書きすると対話履歴を失う。読めないときは起動を止める。
     let parsed: unknown;

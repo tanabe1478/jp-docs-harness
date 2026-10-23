@@ -9,6 +9,8 @@ export type AiInput = {
   surroundingContext: string;
   turns: Array<{ role: "author" | "ai"; text: string }>;
   authorReply?: string;
+  // 書き手が選んで添えた参考資料。
+  references?: Array<{ name: string; content: string }>;
 };
 
 export type AiReflection = {

@@ -1,10 +1,13 @@
 import type {
+  AiConfig,
+  AiMode,
   Anchor,
   CheckResult,
   ContractResult,
   DocumentPayload,
   DocumentSummary,
   ProposalView,
+  ReferenceView,
   SentScope,
   StudioConfig,
   ThreadMode,
@@ -93,5 +96,18 @@ export const api = {
       { decision, expectedHash },
     ),
   check: (path: string) => request<CheckResult>("POST", "/api/check", { path }),
+  listFiles: () => request<{ files: DocumentSummary[] }>("GET", "/api/files"),
+  listReferences: (path: string) => request<{ references: ReferenceView[] }>("GET", `/api/references?path=${q(path)}`),
+  addReference: (path: string, file: string) =>
+    request<{ references: ReferenceView[] }>("POST", "/api/references", { path, file }),
+  updateReference: (id: string, include: boolean) =>
+    request<ReferenceView>("POST", `/api/references/${q(id)}`, { include }),
+  removeReference: (id: string) => request<Record<string, never>>("DELETE", `/api/references/${q(id)}`, {}),
+  aiStatus: () => request<AiConfig>("GET", "/api/ai/status"),
+  aiModels: () => request<{ models: string[] }>("GET", "/api/ai/models"),
+  updateAiSettings: (change: { model?: string | null; mode?: AiMode | null }) =>
+    request<AiConfig>("PUT", "/api/ai/settings", change),
+  startLogin: () => request<{ authUrl: string }>("POST", "/api/ai/login", {}),
+  logout: () => request<AiConfig>("POST", "/api/ai/logout", {}),
   contract: (path: string) => request<ContractResult>("GET", `/api/contract?path=${q(path)}`),
 };

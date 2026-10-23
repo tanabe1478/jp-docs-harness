@@ -55,6 +55,9 @@ export function Header({
   documentPath,
   saveState,
   threadCount,
+  referenceCount,
+  onOpenReferences,
+  onOpenAiSettings,
   onOpenDocuments,
   onOpenThreads,
   onOpenContract,
@@ -63,6 +66,9 @@ export function Header({
   documentPath: string | null;
   saveState: SaveState | null;
   threadCount: number;
+  referenceCount: number;
+  onOpenReferences(): void;
+  onOpenAiSettings(): void;
   onOpenDocuments(): void;
   onOpenThreads(): void;
   onOpenContract(): void;
@@ -77,11 +83,15 @@ export function Header({
           {documentPath ?? "原稿を選ぶ"}
         </button>
       </div>
-      {documentPath && saveState ? (
-        <div className="hactions">
+      <div className="hactions">
+        {documentPath && saveState ? (
+          <>
           <SaveStatus state={saveState} />
           <button type="button" className="tool" onClick={onOpenThreads}>
             対話{threadCount > 0 ? ` ${threadCount}` : ""}
+          </button>
+          <button type="button" className="tool" onClick={onOpenReferences}>
+            資料{referenceCount > 0 ? ` ${referenceCount}` : ""}
           </button>
           <button type="button" className="tool" onClick={onOpenContract}>
             文書契約
@@ -89,8 +99,12 @@ export function Header({
           <button type="button" className="tool" onClick={onRunCheck}>
             検査
           </button>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+        <button type="button" className="tool" onClick={onOpenAiSettings} aria-label="AIの設定">
+          AI
+        </button>
+      </div>
     </header>
   );
 }

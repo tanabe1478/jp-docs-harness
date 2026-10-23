@@ -6,10 +6,12 @@ import { sendError, sendJson } from "./http.ts";
 import { workspaceDataDir } from "./persistence/data-dir.ts";
 import { openStore } from "./persistence/store.ts";
 import type { AiAdapter } from "./providers/ai-adapter.ts";
+import { createStaticAiManager, type AiManager } from "./providers/ai-manager.ts";
 import { createApiRouter } from "./routes/api.ts";
 import { applySecurityHeaders, checkRequest } from "./security/request-guard.ts";
 import { createDocumentService } from "./services/documents.ts";
 import { DEFAULT_HARNESS_BIN, createHarnessService } from "./services/harness.ts";
+import { createReferenceService } from "./services/references.ts";
 import { createThreadService } from "./services/threads.ts";
 
 export const STUDIO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -29,8 +31,12 @@ const CONTENT_TYPES: Record<string, string> = {
 export type StudioServerOptions = {
   workspaceRoot: string;
   dataRoot: string;
-  adapter: AiAdapter | null;
+  // ai を渡せば設定を画面から変えられる。adapter はテストなどの固定構成用。
+  ai?: AiManager;
+  adapter?: AiAdapter | null;
   adapterReason?: string;
+  // ネイティブ版の外側（Tauri）だけが知るトークン。外部ファイルの参考資料の登録に使う。
+  nativeToken?: string;
   port?: number;
   client: "dev" | "static" | "none";
   harnessBin?: string;
@@ -44,7 +50,9 @@ export async function startStudioServer(options: StudioServerOptions): Promise<S
   const dataDirectory = workspaceDataDir(options.dataRoot, root);
   const store = await openStore(dataDirectory, root);
   const documents = createDocumentService(root);
-  const threads = createThreadService({ store, documents, adapter: options.adapter });
+  const ai = options.ai ?? createStaticAiManager(options.adapter ?? null, options.adapterReason);
+  const references = createReferenceService({ root, store, documents });
+  const threads = createThreadService({ store, documents, adapter: () => ai.current(), references });
   const harness = createHarnessService({
     root,
     documents,
@@ -54,11 +62,12 @@ export async function startStudioServer(options: StudioServerOptions): Promise<S
   const api = createApiRouter({
     root,
     dataLocation: store.filePath,
-    adapter: options.adapter,
-    ...(options.adapterReason ? { adapterReason: options.adapterReason } : {}),
+    ai,
     documents,
     threads,
+    references,
     harness,
+    native: Boolean(options.nativeToken),
   });
 
   const dev = options.client === "dev";
@@ -71,7 +80,7 @@ export async function startStudioServer(options: StudioServerOptions): Promise<S
   const server = createServer(async (request, response) => {
     try {
       applySecurityHeaders(response, { dev });
-      const verdict = checkRequest(request, { port, dev });
+      const verdict = checkRequest(request, { port, dev, ...(options.nativeToken ? { nativeToken: options.nativeToken } : {}) });
       if (!verdict.ok) {
         sendJson(response, verdict.status, { error: { code: "forbidden", message: verdict.message } });
         return;

@@ -4,6 +4,7 @@ import type {
   DocumentPayload,
   ProposalRecord,
   ProposalView,
+  SentReference,
   SentScope,
   ThreadMode,
   ThreadRecord,
@@ -15,6 +16,7 @@ import type { Store, StoreData } from "../persistence/store.ts";
 import { AiError, type AiAdapter, type AiInput } from "../providers/ai-adapter.ts";
 import { extractSurroundingContext } from "./context.ts";
 import type { DocumentService } from "./documents.ts";
+import type { ReferenceService } from "./references.ts";
 
 export const MAX_TURNS_SENT = 8;
 
@@ -24,13 +26,16 @@ export function createThreadService({
   store,
   documents,
   adapter,
+  references,
   now = () => new Date().toISOString(),
 }: {
   store: Store;
   documents: DocumentService;
-  adapter: AiAdapter | null;
+  adapter: AiAdapter | null | (() => AiAdapter | null);
+  references?: ReferenceService;
   now?: () => string;
 }) {
+  const currentAdapter = () => (typeof adapter === "function" ? adapter() : adapter);
   const inFlight = new Set<string>();
 
   function view(data: StoreData, thread: ThreadRecord, currentHash: string | null): ThreadView {
@@ -117,7 +122,8 @@ export function createThreadService({
 
   // AIを呼ぶ前提を確かめ、送る内容を組み立てる。
   async function prepareAiCall(threadId: string) {
-    if (!adapter) {
+    const adapterInUse = currentAdapter();
+    if (!adapterInUse) {
       throw new StudioError(
         "ai_not_configured",
         "AIが設定されていません。OPENAI_API_KEY と JP_DOCS_STUDIO_MODEL を設定してから起動し直してください",
@@ -142,16 +148,18 @@ export function createThreadService({
     }
     const surroundingContext = extractSurroundingContext(document.content, thread.anchor.start, thread.anchor.end);
     const turns = thread.turns.slice(-MAX_TURNS_SENT).map((turn) => ({ role: turn.role, text: turn.text }));
-    return { adapter, thread, surroundingContext, turns };
+    const attached = references ? await references.collectForAi(thread.documentPath) : { references: [], sent: [] };
+    return { adapter: adapterInUse, thread, surroundingContext, turns, attached };
   }
 
-  function sentScope(adapterInUse: AiAdapter, input: AiInput): SentScope {
+  function sentScope(adapterInUse: AiAdapter, input: AiInput, sentReferences: SentReference[]): SentScope {
     return {
       provider: adapterInUse.provider,
       model: adapterInUse.model,
       selectionChars: input.selection.length,
       contextChars: input.surroundingContext.length,
       turns: input.turns.length,
+      references: sentReferences,
     };
   }
 
@@ -168,7 +176,7 @@ export function createThreadService({
   }
 
   async function assist(threadId: string): Promise<{ thread: ThreadView; sent: SentScope }> {
-    const { adapter: adapterInUse, thread, surroundingContext, turns } = await prepareAiCall(threadId);
+    const { adapter: adapterInUse, thread, surroundingContext, turns, attached } = await prepareAiCall(threadId);
     const lastTurn = thread.turns.at(-1);
     const hasAiTurn = thread.turns.some((turn) => turn.role === "ai");
     if (hasAiTurn && lastTurn?.role !== "author") {
@@ -180,6 +188,7 @@ export function createThreadService({
       surroundingContext,
       turns,
       ...(hasAiTurn && lastTurn ? { authorReply: lastTurn.text } : {}),
+      ...(attached.references.length > 0 ? { references: attached.references } : {}),
     };
     const output = await callAdapter(threadId, adapterInUse, input);
     if (output.kind !== "reflection") {
@@ -202,13 +211,14 @@ export function createThreadService({
       ].join("\n"),
       createdAt: now(),
       reflection,
+      ...(attached.sent.length > 0 ? { references: attached.sent } : {}),
     };
     await store.update((draft) => {
       const target = findThread(draft, threadId);
       target.turns.push(turn);
       target.updatedAt = turn.createdAt;
     });
-    return { thread: await threadView(threadId), sent: sentScope(adapterInUse, input) };
+    return { thread: await threadView(threadId), sent: sentScope(adapterInUse, input, attached.sent) };
   }
 
   async function addAuthorTurn(threadId: string, text: string): Promise<ThreadView> {
@@ -245,12 +255,13 @@ export function createThreadService({
   }
 
   async function propose(threadId: string): Promise<{ thread: ThreadView; proposal: ProposalView; sent: SentScope }> {
-    const { adapter: adapterInUse, thread, surroundingContext, turns } = await prepareAiCall(threadId);
+    const { adapter: adapterInUse, thread, surroundingContext, turns, attached } = await prepareAiCall(threadId);
     const input: AiInput = {
       action: "propose",
       selection: thread.anchor.quote,
       surroundingContext,
       turns,
+      ...(attached.references.length > 0 ? { references: attached.references } : {}),
     };
     const output = await callAdapter(threadId, adapterInUse, input);
     if (output.kind !== "proposal") {
@@ -272,7 +283,7 @@ export function createThreadService({
     const updated = await threadView(threadId);
     const created = updated.proposals.find((candidate) => candidate.id === proposal.id);
     if (!created) throw new StudioError("internal", "修正案を保存できませんでした", 500);
-    return { thread: updated, proposal: created, sent: sentScope(adapterInUse, input) };
+    return { thread: updated, proposal: created, sent: sentScope(adapterInUse, input, attached.sent) };
   }
 
   async function decideProposal(

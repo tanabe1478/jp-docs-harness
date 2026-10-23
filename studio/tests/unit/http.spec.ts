@@ -103,7 +103,10 @@ describe("HTTP の境界", () => {
     assert.equal(reply.status, 200);
     assert.ok(!reply.body.includes("sk-test-should-not-leak"));
     const config = JSON.parse(reply.body);
-    assert.deepEqual(config.ai, { configured: true, provider: "openai", model: "test-model" });
+    assert.equal(config.ai.configured, true);
+    assert.equal(config.ai.provider, "openai");
+    assert.equal(config.ai.model, "test-model");
+    assert.equal(config.native, false);
   });
 
   it("A-03: ../ で workspace 外を読もうとしても、内容を返さない", async () => {

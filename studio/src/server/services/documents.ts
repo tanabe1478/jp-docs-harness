@@ -67,7 +67,9 @@ export function createDocumentService(root: string) {
     return { path: resolved.relative, content, contentHash: hashContent(content), modifiedAt };
   }
 
-  async function list(): Promise<DocumentSummary[]> {
+  // pattern を省くと Markdown だけを返す。参考資料の候補ではテキストも含める。
+  async function list(pattern?: RegExp): Promise<DocumentSummary[]> {
+    const matches = (name: string) => (pattern ? pattern.test(name) : isMarkdownName(name));
     const results: DocumentSummary[] = [];
     async function walk(directory: string, depth: number) {
       if (depth > MAX_LIST_DEPTH || results.length >= MAX_LIST_ENTRIES) return;
@@ -83,7 +85,7 @@ export function createDocumentService(root: string) {
           if (!SKIPPED_DIRECTORIES.has(entry.name)) await walk(absolute, depth + 1);
           continue;
         }
-        if (!entry.isFile() || !isMarkdownName(entry.name) || !isInside(root, absolute)) continue;
+        if (!entry.isFile() || !matches(entry.name) || !isInside(root, absolute)) continue;
         const stat = await fs.stat(absolute);
         results.push({
           path: path.relative(root, absolute).split(path.sep).join("/"),

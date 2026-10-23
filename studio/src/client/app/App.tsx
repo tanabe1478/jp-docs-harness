@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { DocumentSummary, HarnessFinding, SentScope, StudioConfig, ThreadMode, ThreadView } from "../../shared/schemas.ts";
+import type {
+  AiConfig,
+  DocumentSummary,
+  HarnessFinding,
+  ReferenceView,
+  SentScope,
+  StudioConfig,
+  ThreadMode,
+  ThreadView,
+} from "../../shared/schemas.ts";
 import { AmbientSound } from "../audio/ambient.ts";
 import { Footer, Header, Landscape } from "../components/Chrome.tsx";
 import { DiscussView, type AiCallState } from "../components/DiscussView.tsx";
@@ -15,9 +24,11 @@ import {
 } from "../components/OtherViews.tsx";
 import { ProposalView } from "../components/ProposalView.tsx";
 import { SelectionBar } from "../components/SelectionBar.tsx";
+import { AiSettingsView, ReferencesView } from "../components/StudioPanels.tsx";
 import { Editor, type EditorHandle, type SelectionSnapshot } from "../editor/Editor.tsx";
 import { countCharacters } from "../editor/offsets.ts";
 import { ApiError, api } from "./api.ts";
+import { native, openExternal } from "./native.ts";
 import { useDocumentSession } from "./useDocumentSession.ts";
 
 type PanelState =
@@ -28,6 +39,8 @@ type PanelState =
   | { view: "check" }
   | { view: "contract" }
   | { view: "documents" }
+  | { view: "references" }
+  | { view: "ai-settings" }
   | { view: "ai-unconfigured" };
 
 const VOLUME_KEY = "jp-docs-studio.volume";
@@ -68,6 +81,12 @@ export function App() {
   const [check, setCheck] = useState<CheckState | null>(null);
   const [contract, setContract] = useState<ContractState | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [references, setReferences] = useState<ReferenceView[]>([]);
+  const [referenceCandidates, setReferenceCandidates] = useState<DocumentSummary[]>([]);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
+  const [aiModels, setAiModels] = useState<string[]>([]);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [selection, setSelection] = useState<SelectionSnapshot | null>(null);
   const [editorFocused, setEditorFocused] = useState(false);
   const [barFocused, setBarFocused] = useState(false);
@@ -109,6 +128,18 @@ export function App() {
       setNotice(messageOf(error, "対話を読み込めませんでした"));
     }
   }, []);
+
+  const refreshReferences = useCallback(async (path: string) => {
+    try {
+      setReferences((await api.listReferences(path)).references);
+    } catch (error) {
+      setReferenceError(messageOf(error, "参考資料を読み込めませんでした"));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (documentPath) void refreshReferences(documentPath);
+  }, [documentPath, refreshReferences]);
 
   // 保存のたびに stale の判定が変わるため、対話の状態を読み直す。
   useEffect(() => {
@@ -417,6 +448,7 @@ export function App() {
         if (!saved && !window.confirm("未保存の変更があります。破棄して別の原稿を開きますか？")) return;
       }
       setThreads([]);
+      setReferences([]);
       setCheck(null);
       setContract(null);
       setAi(null);
@@ -425,6 +457,85 @@ export function App() {
     },
     [session],
   );
+
+  // ---- 参考資料 ----
+  const openReferences = useCallback(async () => {
+    if (!documentPath) return;
+    setPanel({ view: "references" });
+    setReferenceError(null);
+    await refreshReferences(documentPath);
+    try {
+      setReferenceCandidates((await api.listFiles()).files);
+    } catch (error) {
+      setReferenceError(messageOf(error, "ファイルの一覧を読み込めませんでした"));
+    }
+  }, [documentPath, refreshReferences]);
+
+  const referenceAction = useCallback(
+    async (action: () => Promise<unknown>, fallback: string) => {
+      if (!documentPath) return;
+      setReferenceError(null);
+      try {
+        await action();
+      } catch (error) {
+        setReferenceError(messageOf(error, fallback));
+      }
+      await refreshReferences(documentPath);
+    },
+    [documentPath, refreshReferences],
+  );
+
+  // ---- AIの設定 ----
+  const applyAi = useCallback((status: AiConfig) => {
+    setConfig((previous) => (previous ? { ...previous, ai: status } : previous));
+  }, []);
+
+  const openAiSettings = useCallback(async () => {
+    setPanel({ view: "ai-settings" });
+    setAiError(null);
+    try {
+      const [status, models] = await Promise.all([api.aiStatus(), api.aiModels()]);
+      applyAi(status);
+      setAiModels(models.models);
+    } catch (error) {
+      setAiError(messageOf(error, "AIの設定を読み込めませんでした"));
+    }
+  }, [applyAi]);
+
+  const aiAction = useCallback(
+    async (action: () => Promise<AiConfig | void>, fallback: string) => {
+      setAiBusy(true);
+      setAiError(null);
+      try {
+        const status = await action();
+        applyAi(status ?? (await api.aiStatus()));
+      } catch (error) {
+        setAiError(messageOf(error, fallback));
+      } finally {
+        setAiBusy(false);
+      }
+    },
+    [applyAi],
+  );
+
+  const login = useCallback(
+    () =>
+      aiAction(async () => {
+        const { authUrl } = await api.startLogin();
+        await openExternal(authUrl);
+      }, "ログインを始められませんでした"),
+    [aiAction],
+  );
+
+  // ブラウザでのログインが終わるまで、状態を数秒おきに確かめる。
+  const loginPending = config?.ai.login.state === "pending";
+  useEffect(() => {
+    if (!loginPending) return;
+    const timer = setInterval(() => {
+      void api.aiStatus().then(applyAi, () => undefined);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [loginPending, applyAi]);
 
   const createDocument = useCallback(
     async (path: string): Promise<string | null> => {
@@ -513,6 +624,9 @@ export function App() {
         documentPath={documentPath}
         saveState={session.document ? session.saveState : null}
         threadCount={threads.length}
+        referenceCount={references.filter((reference) => reference.include).length}
+        onOpenReferences={() => void openReferences()}
+        onOpenAiSettings={() => void openAiSettings()}
         onOpenDocuments={() => {
           setPanel({ view: "documents" });
           void refreshDocuments();
@@ -642,6 +756,7 @@ export function App() {
           ai={ai?.threadId === activeThread.id ? ai.state : null}
           aiConfig={config.ai}
           sent={sent}
+          attachedReferences={references.filter((reference) => reference.include && reference.available).length}
           onClose={closePanel}
           onReply={(text) => reply(activeThread.id, text)}
           onRetry={() => void runAssist(activeThread.id)}
@@ -697,7 +812,45 @@ export function App() {
         />
       ) : null}
       {panel?.view === "ai-unconfigured" && config && !config.ai.configured ? (
-        <AiUnconfiguredView reason={config.ai.reason} onClose={closePanel} />
+        <AiUnconfiguredView
+          reason={config.ai.reason}
+          onClose={closePanel}
+          {...(config.ai.manageable ? { onOpenSettings: () => void openAiSettings() } : {})}
+        />
+      ) : null}
+      {panel?.view === "references" && documentPath ? (
+        <ReferencesView
+          documentPath={documentPath}
+          references={references}
+          candidates={referenceCandidates}
+          nativePicker={Boolean(native)}
+          error={referenceError}
+          onClose={closePanel}
+          onAdd={(file) => void referenceAction(() => api.addReference(documentPath, file), "資料を加えられませんでした")}
+          onToggle={(reference, include) => {
+            // 押した時点で表示を変え、保存の結果で読み直す。
+            setReferences((previous) => previous.map((item) => (item.id === reference.id ? { ...item, include } : item)));
+            void referenceAction(() => api.updateReference(reference.id, include), "資料の設定を変えられませんでした");
+          }}
+          onRemove={(reference) => void referenceAction(() => api.removeReference(reference.id), "資料を外せませんでした")}
+          onPickExternal={() => {
+            const bridge = native;
+            if (bridge) void referenceAction(() => bridge.pickReferences(documentPath), "ファイルを加えられませんでした");
+          }}
+        />
+      ) : null}
+      {panel?.view === "ai-settings" && config ? (
+        <AiSettingsView
+          ai={config.ai}
+          models={aiModels}
+          busy={aiBusy}
+          error={aiError}
+          onClose={closePanel}
+          onLogin={() => void login()}
+          onLogout={() => void aiAction(() => api.logout(), "ログアウトできませんでした")}
+          onSaveModel={(model) => void aiAction(() => api.updateAiSettings({ model }), "モデルを保存できませんでした")}
+          onChooseMode={(mode) => void aiAction(() => api.updateAiSettings({ mode }), "方式を変えられませんでした")}
+        />
       ) : null}
 
       <Footer

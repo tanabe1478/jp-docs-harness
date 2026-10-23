@@ -18,6 +18,7 @@ export function DiscussView({
   ai,
   aiConfig,
   sent,
+  attachedReferences = 0,
   onClose,
   onReply,
   onRetry,
@@ -29,6 +30,7 @@ export function DiscussView({
   ai: AiCallState | null;
   aiConfig: AiConfig;
   sent: SentScope | null;
+  attachedReferences?: number;
   onClose(): void;
   onReply(text: string): Promise<boolean>;
   onRetry(): void;
@@ -87,10 +89,14 @@ export function DiscussView({
       <p className="sepcaption" data-testid="send-scope">
         {aiConfig.configured ? (
           <>
-            AI送信範囲: 選択文・前後の限定文脈・この対話
+            AI送信範囲: 選択文・前後の限定文脈・この対話{attachedReferences > 0 ? `・参考資料${attachedReferences}件` : ""}
             <br />
             送信先: {providerLabel(aiConfig.provider)} {aiConfig.model}
-            {sent ? `（前回 選択${sent.selectionChars}字・文脈${sent.contextChars}字・発言${sent.turns}件）` : ""}
+            {sent
+              ? `（前回 選択${sent.selectionChars}字・文脈${sent.contextChars}字・発言${sent.turns}件${
+                  sent.references.length > 0 ? `・資料${sent.references.length}件` : ""
+                }）`
+              : ""}
           </>
         ) : (
           "AIは未設定です。執筆と保存はこのまま使えます。"
