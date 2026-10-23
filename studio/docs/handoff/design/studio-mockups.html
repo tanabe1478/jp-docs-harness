@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>jp-docs Studio — UI reference v0.3</title>
+<style>
+:root{--ink:#343b38;--sub:#707a72;--muted:#8c958d;--accent:#577c69;--accent-soft:#dce9de;--sand:#edebe5;--paper:#f9f8f3;--line:rgba(67,79,69,.17);--shadow:0 26px 90px rgba(45,58,52,.10);--bodyfont:'Noto Serif CJK JP','Yu Mincho','Hiragino Mincho ProN',serif;--uifont:'Noto Sans CJK JP','Hiragino Kaku Gothic ProN',system-ui,sans-serif}
+[hidden]{display:none!important}*{box-sizing:border-box}html,body{margin:0;min-height:100%;color:var(--ink)}body{background:#ecebe5;font-family:var(--uifont)}button{font:inherit;cursor:pointer}button:focus-visible,textarea:focus-visible{outline:2px solid #557e68;outline-offset:3px}
+.scene{position:relative;min-height:900px;height:100vh;min-width:880px;overflow:hidden;background:radial-gradient(ellipse 70% 55% at 55% 3%,rgba(255,255,255,.79),transparent 75%),linear-gradient(159deg,#edeae4 4%,#eeede6 40%,#dce4dc 100%)}
+.scene:before{content:'';position:absolute;inset:0;opacity:.27;pointer-events:none;background:radial-gradient(ellipse at 15% 58%,rgba(191,199,180,.56),transparent 42%),radial-gradient(ellipse at 88% 82%,rgba(159,182,165,.50),transparent 34%)}
+.landscape{position:absolute;bottom:-1px;left:0;width:100%;height:260px;pointer-events:none;opacity:.37}
+.header{position:relative;z-index:4;height:88px;margin:0 38px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(99,111,97,.11)}
+.brand{display:flex;gap:11px;align-items:center;font-family:var(--bodyfont);font-size:19px;letter-spacing:.025em}.logo{color:#607b69;width:20px;height:20px}.brand small{font-size:11px;color:var(--sub);font-family:var(--uifont);margin-left:14px;letter-spacing:.06em}
+.hactions,.status{display:flex;align-items:center;gap:16px}.status{font-size:12px;color:var(--sub)}.tiny-dot{width:6px;height:6px;border-radius:50%;background:#71937c}.tool{background:rgba(255,255,255,.31);border:1px solid rgba(96,108,97,.15);border-radius:999px;color:#68756d;font-size:12px;padding:9px 14px}.tool:hover{background:rgba(255,255,255,.64)}
+.editor{position:absolute;left:calc(50% - 310px);top:192px;width:620px;z-index:2}.eyebrow{font-family:var(--uifont);font-size:12px;letter-spacing:.11em;color:#808b80;margin:0 0 23px}.editor h1{font-family:var(--bodyfont);font-weight:500;letter-spacing:.07em;font-size:34px;line-height:1.55;margin:0 0 54px;color:#343b36}.bodycopy{font-family:var(--bodyfont);font-weight:400;font-size:19px;line-height:2.25;letter-spacing:.028em}.bodycopy p{margin:0 0 28px}.selection{box-decoration-break:clone;-webkit-box-decoration-break:clone;background:rgba(190,206,177,.56);border-radius:2px;box-shadow:0 0 0 3px rgba(190,206,177,.25)}.proposal-mark{background:rgba(232,207,167,.49)}
+.cursor{display:inline-block;margin-left:1px;width:1px;height:26px;vertical-align:-5px;background:#506e5d;animation:blink 1.1s steps(2,start) infinite}@keyframes blink{to{opacity:0}}@media(prefers-reduced-motion:reduce){.cursor{animation:none}}
+.foot{position:absolute;z-index:3;bottom:28px;left:38px;right:38px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#77827a}.sound{display:flex;align-items:center;gap:10px}.sound-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.48);border:1px solid rgba(99,111,97,.11);padding:9px 13px;border-radius:100px}.sound-status{color:#879088}.footright{display:flex;align-items:center;gap:19px}.footright i{font-style:normal;color:#9ca89b}
+.panel{position:absolute;z-index:5;right:30px;top:120px;width:346px;height:min(704px,calc(100vh - 195px));padding:20px 22px;overflow:hidden;background:rgba(250,249,245,.95);border:1px solid rgba(100,118,103,.17);border-radius:13px;box-shadow:var(--shadow);backdrop-filter:blur(18px);display:flex;flex-direction:column;gap:12px}.paneltop{display:flex;align-items:center;justify-content:space-between;padding-bottom:17px;border-bottom:1px solid var(--line)}.paneltitle{font-size:14px;font-weight:600;display:flex;align-items:center;gap:9px}.paneltitle svg{color:var(--accent)}.x{border:0;background:transparent;color:#6d796d;font-size:20px;padding:0 6px}
+.tlabel{text-transform:uppercase;letter-spacing:.11em;font-size:10px;color:#8a978b;display:block;margin-bottom:9px;font-weight:600}.pgroup{font-family:var(--bodyfont);font-size:14px;line-height:1.95}.pgroup p{margin:0}.question{background:#edf2eb;border:1px solid rgba(107,142,117,.13);border-radius:9px;padding:13px;font-family:var(--bodyfont);font-size:13px;line-height:1.8}
+.panelSpacer{flex:1}.reply{min-height:91px;width:100%;background:#fff;border:1px solid #d9ded7;border-radius:9px;padding:12px;resize:none;font-family:var(--uifont);font-size:12px;color:var(--ink)}.buttonrow{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.btn{border:1px solid #cdd8cd;border-radius:8px;background:rgba(255,255,255,.9);font-size:12px;padding:9px 12px;color:#4e6a55}.btn.primary{color:white;background:#617f69;border-color:#617f69}.btn.alt{background:#eff2ec;border-color:#e1e5de}.sepcaption{font-size:11px;color:#89948b}
+.floatbar{position:absolute;z-index:6;left:calc(50% - 198px);top:447px;display:flex;align-items:center;gap:0;background:#fcfbf8;border:1px solid #e0e3dc;box-shadow:0 15px 38px rgba(35,48,42,.12);border-radius:8px;padding:5px}.floatbar span{padding:8px 11px;font-size:12px;color:#557361}.floatbar span+span{border-left:1px solid #e8eae5}
+.note{position:absolute;left:38px;bottom:75px;color:#7d897f;font-size:11px;letter-spacing:.09em}.footnote{font-size:12px;color:#849084}
+.diffbox{background:#f4f3ee;border:1px solid #e7e6df;border-radius:9px;padding:13px;display:grid;gap:13px;font-size:12px;line-height:1.9}.diffrow{display:flex;gap:8px;align-items:start}.diffsign{color:#8a938a;font-family:monospace}.difftext{flex:1;font-family:var(--bodyfont)}.removed{background:#f4e0db;text-decoration:line-through;text-decoration-color:#b1857c;border-radius:2px}.added{background:#dcebdc;border-radius:2px}.insight{background:#eaf0e8;border-left:3px solid #779782;border-radius:4px;padding:11px 12px;font-family:var(--bodyfont);font-size:12px;line-height:1.75}
+.panel .small{font-size:12px;color:#718275;line-height:1.6}.panel .warning{background:#f6eee4;border-radius:6px;padding:10px 12px;font-size:11px;color:#756b5b}
+.view-switch{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:100;background:#283b31e8;border-radius:30px;display:flex;padding:4px;gap:4px;box-shadow:0 7px 25px #4a4a4a20}.view-switch a{font:12px var(--uifont);color:#d2dfd2;padding:8px 14px;border-radius:20px;text-decoration:none}.view-switch a.on{background:#f6f8f3;color:#35533e}
+.demoTag{position:absolute;z-index:3;top:111px;left:39px;font-size:10px;letter-spacing:.11em;color:#9ba79a;opacity:.7}
+@media(max-width:1120px){.scene{min-width:0}.editor{left:calc(50% - 300px);width:600px}.panel{width:min(360px,calc(100vw - 25px));right:12px;top:108px;height:calc(100vh - 160px)}.header{margin:0 20px}.foot{left:20px;right:20px}}
+@media(max-width:680px){.wide{display:none}.floatbar{display:none!important}.panelSpacer{display:none}.panel #dialogContent,.panel #proposalContent{overflow-y:auto;flex:1;min-height:0}.panel .buttonrow{flex-shrink:0}.panel .sepcaption{flex-shrink:0}.scene{height:100dvh;min-height:700px}.header{height:72px;margin:0 17px}.brand{font-size:15px}.brand small{display:none}.hactions{gap:7px}.status span:nth-child(2){display:none}.tool{padding:7px 9px;font-size:11px}.editor{left:25px;right:25px;width:auto;top:155px}.editor h1{font-size:27px;margin-bottom:37px}.bodycopy{font-size:17px;line-height:2.1}.eyebrow{margin-bottom:17px}.panel{top:auto;bottom:0;right:0;left:0;height:70dvh;width:100%;overflow:hidden;border-radius:19px 19px 0 0;padding:19px 23px}.floatbar{left:20px;top:420px}.foot{bottom:15px}.footright{gap:9px}.footright span:last-child{display:none}.demoTag{left:20px;top:96px}}
+</style>
+</head>
+<body>
+<div class="scene" id="scene">
+  <svg class="landscape" preserveAspectRatio="none" viewBox="0 0 1440 260" aria-hidden="true"><defs><linearGradient id="hill"><stop stop-color="#9baea2" stop-opacity=".1"/><stop offset="1" stop-color="#819789" stop-opacity=".3"/></linearGradient></defs><path d="M0 165 C200 145 290 180 470 160 S780 126 960 163 S1300 132 1440 110 V260 H0Z" fill="url(#hill)"/><path d="M0 209 C190 182 320 226 560 188 S960 211 1190 163 S1380 174 1440 150 V260 H0Z" fill="#b7c5b9" opacity=".22"/></svg>
+  <header class="header">
+    <div class="brand"><svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.8 3C14 2 8 6 5.2 13.8L3 21l7.4-2C17.5 16.8 21.8 9.8 20.8 3Z"/><path d="M5 19c3-4 7.4-8.2 12-11"/></svg><span>jp-docs Studio</span><small id="docname">考えるということ.md</small></div>
+    <div class="hactions"><div class="status"><i class="tiny-dot"></i><span>保存済み</span></div><button class="tool" type="button">文書契約</button><button class="tool" type="button">検査</button></div>
+  </header>
+  <div class="demoTag" id="tag">FOCUS / 静かな執筆</div>
+  <main class="editor" aria-label="Markdown editor sample">
+    <p class="eyebrow">思考の断片　 /　2026.10.15</p>
+    <h1>文章を書くということ</h1>
+    <div class="bodycopy">
+      <p>私は、AIが文章を完成させてくれることよりも、<br class="wide"/>AIとの対話を通じて自分の考えが明確になる<br class="wide"/>ことに価値を感じている。</p>
+      <p><span id="selectable">しかし、AIと対話することが、いつも思考を<br class="wide"/>深めるとは限らない。</span></p>
+      <p>では、どのような対話に価値があるのだろうか。</p>
+      <p id="cursor"><span class="cursor"></span></p>
+    </div>
+  </main>
+  <div class="floatbar" id="floatbar" hidden><span>✧　どう読める？</span><span>↗　別の見方は？</span></div>
+  <aside class="panel" id="panel" hidden>
+    <div class="paneltop"><div class="paneltitle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 21 1.9-5.2L20 13l-6.1-2.8L12 5l-1.9 5.2L4 13l6.1 2.8L12 21Z"/></svg><span id="ptitle">この箇所について</span></div><button class="x" type="button" aria-label="閉じる">×</button></div>
+    <div id="dialogContent">
+      <div class="pgroup"><span class="tlabel">こう読めました</span><p>AIとの対話は必ずしも思考の深化につながらず、その質に違いがある、という主張だと読みました。</p></div>
+      <div class="pgroup" style="margin-top:22px"><span class="tlabel">そう考えた理由</span><p>「いつも〜とは限らない」という表現から、対話の条件を探ろうとしているように感じます。</p></div>
+      <div style="margin-top:22px"><span class="tlabel">確認したいこと</span><div class="question">あなたが価値を感じなかった対話には、どんな特徴がありましたか？</div></div>
+      <div style="margin-top:21px"><span class="tlabel">あなたの返答</span><textarea class="reply" placeholder="AIの解釈に同意しなくても構いません"></textarea></div>
+    </div>
+    <div id="proposalContent" hidden>
+      <span class="tlabel">置換する箇所</span><p class="small">原稿はまだ変更されていません。差分を確認してから判断してください。</p>
+      <div class="diffbox" style="margin-top:18px">
+        <div class="diffrow"><span class="diffsign">−</span><div class="difftext"><span class="removed">しかし、AIと対話することが、いつも思考を深めるとは限らない。</span></div></div>
+        <div class="diffrow"><span class="diffsign">＋</span><div class="difftext"><span class="added">しかし、問いを受け取るだけでは思考は深まらない。自分の考えと照らし合わせて初めて、対話に価値が生まれる。</span></div></div>
+      </div>
+      <div style="margin-top:21px"><span class="tlabel">書き手自身の気づき</span><div class="insight">AIの問いに答えることよりも、問いを批判的に検討する時間が重要なのかもしれない。</div></div>
+      <p class="warning" style="margin-top:16px">選択範囲だけを置換します。採用しない限りMarkdownは変わりません。</p>
+    </div>
+    <div class="panelSpacer"></div>
+    <div class="buttonrow" id="dialogButtons"><button class="btn primary">返答する</button><button class="btn alt">保留</button><button class="btn alt">却下</button><button class="btn">修正案を見る →</button></div>
+    <div class="buttonrow" id="proposalButtons" hidden><button class="btn primary">この修正を採用</button><button class="btn alt">破棄</button><button class="btn">対話に戻る</button></div>
+    <div class="sepcaption" id="sendInfo">AI送信範囲: 選択文・前後の限定文脈・この対話</div>
+  </aside>
+  <footer class="foot"><div class="sound"><div class="sound-pill">◌　環境音 <span class="sound-status">OFF</span></div><span>音量 0%</span></div><div class="footright"><span>186 字</span><i>│</i><span id="footlabel">静かな執筆</span></div></footer>
+</div>
+<script>
+const params = new URLSearchParams(location.search); const view = params.get('view') || 'focus';
+document.getElementById('tag').textContent = ({focus:'FOCUS / 静かな執筆',dialog:'DISCUSS / AIとの対話',proposal:'PROPOSAL / 差分を確認'})[view] || 'FOCUS';
+document.getElementById('footlabel').textContent=({focus:'静かな執筆',dialog:'AIとの対話',proposal:'あなたが判断する'})[view] || '静かな執筆';
+if(view==='dialog'||view==='proposal') {document.getElementById('panel').hidden=false;document.getElementById('selectable').className=view==='proposal'?'proposal-mark':'selection';}
+if(view==='dialog'){document.getElementById('floatbar').hidden=false;}
+if(view==='proposal'){document.getElementById('ptitle').textContent='修正案を検討する';document.getElementById('dialogContent').hidden=true;document.getElementById('proposalContent').hidden=false;document.getElementById('dialogButtons').hidden=true;document.getElementById('proposalButtons').hidden=false;document.getElementById('sendInfo').textContent='承認するまで原稿は変更されません';}
+</script>
+</body>
+</html>
