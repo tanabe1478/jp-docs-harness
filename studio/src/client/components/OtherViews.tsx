@@ -160,12 +160,14 @@ export function DocumentList({
   onOpen,
   onCreate,
   dataLocation,
+  onChooseWorkspace,
 }: {
   documents: DocumentSummary[];
   currentPath: string | null;
   onOpen(path: string): void;
   onCreate(path: string): Promise<string | null>;
   dataLocation?: string;
+  onChooseWorkspace?: () => void;
 }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -221,6 +223,11 @@ export function DocumentList({
           </li>
         ))}
       </ul>
+      {onChooseWorkspace ? (
+        <button type="button" className="btn alt" onClick={onChooseWorkspace}>
+          workspace を選び直す…
+        </button>
+      ) : null}
       {dataLocation ? (
         <p className="small data-location">
           対話・気づき・修正案の記録は workspace の外に保存しています: <code>{dataLocation}</code>

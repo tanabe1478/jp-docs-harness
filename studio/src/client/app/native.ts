@@ -9,6 +9,8 @@ export const native = isTauri()
       openExternal: (url: string) => invoke<void>("open_external", { url }),
       // workspace を選び直す。選ぶとサーバーが起動し直し、画面も読み込み直される。
       chooseWorkspace: () => invoke<boolean>("choose_workspace"),
+      // 画面がネイティブ機能へつながったことをネイティブ側に伝える。
+      ready: () => invoke<string>("native_ready"),
     }
   : null;
 

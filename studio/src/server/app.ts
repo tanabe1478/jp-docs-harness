@@ -79,7 +79,7 @@ export async function startStudioServer(options: StudioServerOptions): Promise<S
 
   const server = createServer(async (request, response) => {
     try {
-      applySecurityHeaders(response, { dev });
+      applySecurityHeaders(response, { dev, native: Boolean(options.nativeToken) });
       const verdict = checkRequest(request, { port, dev, ...(options.nativeToken ? { nativeToken: options.nativeToken } : {}) });
       if (!verdict.ok) {
         sendJson(response, verdict.status, { error: { code: "forbidden", message: verdict.message } });

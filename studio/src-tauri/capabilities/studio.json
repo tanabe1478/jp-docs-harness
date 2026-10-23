@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "studio",
+  "description": "同梱のサーバー（127.0.0.1）が配信する Studio の画面に、必要なネイティブ機能だけを許可する",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["http://127.0.0.1:*/*", "http://127.0.0.1:*"]
+  },
+  "permissions": ["core:default", "allow-pick-references", "allow-open-external", "allow-choose-workspace", "allow-native-ready"]
+}

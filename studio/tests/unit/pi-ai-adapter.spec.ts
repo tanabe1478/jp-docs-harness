@@ -122,7 +122,7 @@ describe("使う AI の選択", () => {
     const credentials = new InMemoryCredentialStore();
     const none = await resolveAiAdapter({ env: { JP_DOCS_STUDIO_MODEL: "gpt-6-sol" }, credentials });
     assert.equal(none.adapter, null);
-    assert.match(String(none.reason), /npm run login/);
+    assert.match(String(none.reason), /「AI」から ChatGPT にログイン/);
     const chatgpt = await resolveAiAdapter({ env: { JP_DOCS_STUDIO_AI: "chatgpt", JP_DOCS_STUDIO_MODEL: "gpt-6-sol" }, credentials });
     assert.match(String(chatgpt.reason), /ログインしていません/);
     const invalid = await resolveAiAdapter({ env: { JP_DOCS_STUDIO_AI: "claude" }, credentials });

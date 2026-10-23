@@ -28,10 +28,10 @@ export async function resolveAiAdapter({
   const loggedIn = stored?.type === "oauth";
   if (mode === "chatgpt" || (mode === undefined && loggedIn)) {
     if (!loggedIn) {
-      return { adapter: null, reason: "ChatGPT にログインしていません。studio ディレクトリで npm run login を実行してください" };
+      return { adapter: null, reason: "ChatGPT にログインしていません。画面右上の「AI」からログインしてください（端末では npm run login）" };
     }
     const modelId = env.JP_DOCS_STUDIO_MODEL?.trim();
-    if (!modelId) return { adapter: null, reason: "JP_DOCS_STUDIO_MODEL（使用するモデル名）が未設定です" };
+    if (!modelId) return { adapter: null, reason: "使うモデルが未設定です。画面右上の「AI」でモデルを選んでください（環境変数では JP_DOCS_STUDIO_MODEL）" };
     const models = createModels({ credentials });
     models.setProvider(openaiProvider());
     const model = models.getModel(PI_AI_PROVIDER_ID, modelId);
@@ -45,6 +45,6 @@ export async function resolveAiAdapter({
   if (fromEnv.adapter || mode === "openai-api") return fromEnv;
   return {
     adapter: null,
-    reason: "AIが設定されていません。npm run login で ChatGPT にログインするか、OPENAI_API_KEY を設定し、JP_DOCS_STUDIO_MODEL にモデル名を指定してください",
+    reason: "AIが設定されていません。画面右上の「AI」から ChatGPT にログインしてモデルを選ぶか、OPENAI_API_KEY と JP_DOCS_STUDIO_MODEL を設定してください",
   };
 }

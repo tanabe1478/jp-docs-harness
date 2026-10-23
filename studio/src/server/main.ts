@@ -14,6 +14,7 @@ async function main() {
       workspace: { type: "string" },
       port: { type: "string" },
       dev: { type: "boolean", default: false },
+      "exit-with-stdin": { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
     },
     allowPositionals: false,
@@ -65,6 +66,13 @@ async function main() {
     void studio.close().then(() => process.exit(0));
   };
   process.on("SIGINT", shutdown);
+  // デスクトップ版では、外側のアプリが標準入力をパイプで握っている。アプリが異常終了して
+  // パイプが閉じたら、サーバーも終了する（親のいない Node を残さないため）。
+  if (values["exit-with-stdin"]) {
+    process.stdin.on("end", shutdown);
+    process.stdin.on("close", shutdown);
+    process.stdin.resume();
+  }
   process.on("SIGTERM", shutdown);
 }
 

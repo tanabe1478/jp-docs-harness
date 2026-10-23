@@ -5,7 +5,7 @@ const QUOTE = "しかし、AIと対話することが、いつも思考を深め
 test.describe("執筆から採用までの主要フロー", () => {
   test.use({ files: {} });
 
-  test("執筆→選択→AIへ質問→返答→気づき→提案→採用→再読込", async ({ page, studio }) => {
+  test("執筆→選択→AIへ質問→返答→気づき→提案→採用→再読込", async ({ page, studio, browserName }) => {
     await page.goto(studio.url);
     await expect(page.getByRole("heading", { name: "書きはじめる" })).toBeVisible();
 
@@ -15,9 +15,15 @@ test.describe("執筆から採用までの主要フロー", () => {
     await expect(page.locator(".cm-content")).toBeVisible();
     await page.locator(".cm-content").click();
     await page.keyboard.insertText(SAMPLE);
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send("Input.imeSetComposition", { text: "かんがえ", selectionStart: 4, selectionEnd: 4 });
-    await cdp.send("Input.insertText", { text: "考え" });
+    if (browserName === "chromium") {
+      // IME の変換中の入力を、Chromium の開発者向けプロトコルで再現する。
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send("Input.imeSetComposition", { text: "かんがえ", selectionStart: 4, selectionEnd: 4 });
+      await cdp.send("Input.insertText", { text: "考え" });
+    } else {
+      // WebKit では IME を再現する手段がないため、確定後の文字列を入力する。
+      await page.keyboard.insertText("考え");
+    }
     await page.keyboard.insertText("を残す。");
     await waitSaved(page);
     const written = `${SAMPLE}考えを残す。`;

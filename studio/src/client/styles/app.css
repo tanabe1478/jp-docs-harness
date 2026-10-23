@@ -869,6 +869,9 @@ details summary {
   border-radius: 9px;
   padding: 8px 10px;
 }
+.reference-toggle input {
+  accent-color: var(--accent);
+}
 .reference-toggle {
   display: flex;
   flex-direction: column;

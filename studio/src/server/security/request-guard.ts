@@ -56,10 +56,15 @@ function sameSecret(presented: string, expected: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-export function applySecurityHeaders(response: ServerResponse, { dev }: { dev: boolean }) {
+export function applySecurityHeaders(response: ServerResponse, { dev, native = false }: { dev: boolean; native?: boolean }) {
   // 開発時は Vite の HMR がインラインスクリプトと WebSocket を使うため緩める。
   const scriptSrc = dev ? "'self' 'unsafe-inline'" : "'self'";
-  const connectSrc = dev ? "'self' ws://127.0.0.1:* ws://localhost:*" : "'self'";
+  // ネイティブ版では、画面から Tauri の IPC（ipc: と http://ipc.localhost）へ接続する。
+  const connectSrc = [
+    "'self'",
+    ...(dev ? ["ws://127.0.0.1:*", "ws://localhost:*"] : []),
+    ...(native ? ["ipc:", "http://ipc.localhost"] : []),
+  ].join(" ");
   response.setHeader(
     "Content-Security-Policy",
     [

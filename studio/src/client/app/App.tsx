@@ -107,6 +107,7 @@ export function App() {
   useEffect(() => {
     void (async () => {
       try {
+        if (native) void native.ready().catch(() => setNotice("デスクトップ版の機能に接続できませんでした"));
         const [loadedConfig, list] = await Promise.all([api.config(), api.listDocuments()]);
         setConfig(loadedConfig);
         setDocuments(list.documents);
@@ -727,6 +728,7 @@ export function App() {
                   onOpen={(path) => void switchDocument(path)}
                   onCreate={createDocument}
                   dataLocation={config.dataLocation}
+                  {...(native ? { onChooseWorkspace: () => void native?.chooseWorkspace() } : {})}
                 />
               ) : (
                 <p className="loading">読み込んでいます…</p>
@@ -808,6 +810,7 @@ export function App() {
           onOpen={(path) => void switchDocument(path)}
           onCreate={createDocument}
           {...(config ? { dataLocation: config.dataLocation } : {})}
+          {...(native ? { onChooseWorkspace: () => void native?.chooseWorkspace() } : {})}
           onClose={closePanel}
         />
       ) : null}

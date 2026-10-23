@@ -8,10 +8,12 @@ export default defineConfig({
   fullyParallel: true,
   reporter: [["list"]],
   use: {
-    ...devices["Desktop Chrome"],
-    viewport: { width: 1440, height: 900 },
     locale: "ja-JP",
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium" }],
+  // デスクトップ版の macOS は WebKit（WKWebView）で画面を動かすため、WebKit でも同じ流れを確かめる。
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },
+    { name: "webkit", use: { ...devices["Desktop Safari"], viewport: { width: 1440, height: 900 } } },
+  ],
 });
