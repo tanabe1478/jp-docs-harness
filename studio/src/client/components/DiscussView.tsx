@@ -256,7 +256,9 @@ function TurnView({ turn }: { turn: Turn }) {
 }
 
 function providerLabel(provider: string): string {
-  return provider === "openai" ? "OpenAI" : provider;
+  if (provider === "openai") return "OpenAI API";
+  if (provider === "openai-chatgpt") return "OpenAI（ChatGPT のサブスクリプション）";
+  return provider;
 }
 
 export function excerpt(text: string, limit = 80): string {

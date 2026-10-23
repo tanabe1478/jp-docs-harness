@@ -246,8 +246,9 @@ export function AiUnconfiguredView({ reason, onClose }: { reason: string; onClos
         <p className="small">{reason}</p>
       </div>
       <p className="small">
-        OPENAI_API_KEY と JP_DOCS_STUDIO_MODEL を環境変数に設定し、Studio のサーバーを起動し直してください。OpenAI API の利用は ChatGPT の有料プランとは別に課金されます。
+        ChatGPT のサブスクリプションで使う場合は、studio ディレクトリで npm run login を実行してログインします。OpenAI API を使う場合は OPENAI_API_KEY を設定します。どちらも JP_DOCS_STUDIO_MODEL にモデル名を指定し、Studio のサーバーを起動し直してください。
       </p>
+      <p className="small">OpenAI API の利用は、ChatGPT の有料プランとは別に課金されます。</p>
       <p className="small">執筆・保存・検査は、AIを設定しなくてもこのまま使えます。</p>
     </Panel>
   );

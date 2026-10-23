@@ -1,7 +1,8 @@
 import { parseArgs } from "node:util";
 import { startStudioServer } from "./app.ts";
+import { FileCredentialStore, credentialFilePath } from "./persistence/credential-store.ts";
 import { defaultDataRoot } from "./persistence/data-dir.ts";
-import { createAdapterFromEnv } from "./providers/openai-adapter.ts";
+import { resolveAiAdapter } from "./providers/resolve.ts";
 import { resolveWorkspaceRoot } from "./security/workspace.ts";
 
 const DEFAULT_PORT = 4873;
@@ -28,10 +29,11 @@ async function main() {
   const port = values.port === undefined ? DEFAULT_PORT : Number(values.port);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error(`--port が不正です: ${values.port}`);
 
-  const ai = createAdapterFromEnv();
+  const dataRoot = defaultDataRoot();
+  const ai = await resolveAiAdapter({ credentials: new FileCredentialStore(credentialFilePath(dataRoot)) });
   const studio = await startStudioServer({
     workspaceRoot,
-    dataRoot: defaultDataRoot(),
+    dataRoot,
     adapter: ai.adapter,
     ...(ai.reason ? { adapterReason: ai.reason } : {}),
     port,

@@ -1,8 +1,13 @@
-// 実際の OpenAI API に1回ずつ解釈と修正案を依頼する。課金が発生するため、明示的に実行したときだけ動く。
-// 使い方: OPENAI_API_KEY=... JP_DOCS_STUDIO_MODEL=... npm run test:ai-smoke
-import { createAdapterFromEnv } from "../../src/server/providers/openai-adapter.ts";
+// 実際のモデルに1回ずつ解釈と修正案を依頼する。利用枠や課金を消費するため、明示的に実行したときだけ動く。
+// 使い方: JP_DOCS_STUDIO_MODEL=... npm run test:ai-smoke
+// （npm run login で ChatGPT にログイン済みならそれを、なければ OPENAI_API_KEY を使う）
+import { FileCredentialStore, credentialFilePath } from "../../src/server/persistence/credential-store.ts";
+import { defaultDataRoot } from "../../src/server/persistence/data-dir.ts";
+import { resolveAiAdapter } from "../../src/server/providers/resolve.ts";
 
-const { adapter, reason } = createAdapterFromEnv();
+const { adapter, reason } = await resolveAiAdapter({
+  credentials: new FileCredentialStore(credentialFilePath(defaultDataRoot())),
+});
 if (!adapter) {
   process.stdout.write(`未実行: ${reason}\n`);
   process.exit(0);

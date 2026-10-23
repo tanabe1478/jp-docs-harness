@@ -32,14 +32,20 @@ npm start -- --workspace /absolute/path/to/writing-workspace
 
 ## AIの設定
 
-AIを使う場合は、サーバーを起動する前に次の環境変数を設定します。設定しなくても、執筆・保存・検査は使えます。その場合、AIのボタンは設定が必要であることだけを表示し、回答らしきものは出しません。
+AIは次のどちらかで使います。どちらも設定しなくても、執筆・保存・検査は使えます。その場合、AIのボタンは設定が必要であることだけを表示し、回答らしきものは出しません。
+
+- ChatGPTのサブスクリプション（Sign in with ChatGPT）。`studio`ディレクトリで`npm run login`を実行し、ブラウザでログインします。
+- OpenAI API。`OPENAI_API_KEY`を設定します。利用料はChatGPTの有料プランとは別に課金されます。
+
+どちらの場合も、使うモデル名を`JP_DOCS_STUDIO_MODEL`に指定してからサーバーを起動します。
 
 | 環境変数 | 内容 |
 | --- | --- |
-| `OPENAI_API_KEY` | OpenAI APIのキー |
 | `JP_DOCS_STUDIO_MODEL` | 使用するモデル名（必須。既定値はありません） |
+| `OPENAI_API_KEY` | OpenAI APIのキー（APIで使う場合） |
+| `JP_DOCS_STUDIO_AI` | `chatgpt`か`openai-api`。省略するとChatGPTにログイン済みならChatGPT、そうでなければAPIキーを使う |
 
-OpenAI APIの利用料は、ChatGPTの有料プランとは別に課金されます。
+ChatGPTでの呼び出しには[pi-ai](https://github.com/earendil-works/pi/tree/main/packages/ai)の`openai`プロバイダーを使います。ログイン情報はデータ置き場の`credentials.json`に、所有者だけが読める権限で保存します。ブラウザと対話データには渡しません。トークンの更新もpi-aiが行います。ログアウトは`npm run logout`です。ログインやログアウトの後は、サーバーを起動し直してください。
 
 APIキーはサーバーの環境変数からだけ読みます。ブラウザ、ログ、保存する対話データには書き込みません。
 
@@ -49,7 +55,7 @@ AIへ送るのは次の範囲だけです。原稿全体は送りません。
 - 選択箇所を含む段落の前後1段落（前後それぞれ最大2000字）
 - その対話の直近8件の発言
 
-Responses APIへは`store: false`を指定して送ります。
+ChatGPTでもAPIキーでも、Responses APIへは`store: false`で送ります。
 
 ## 保存先と削除
 
@@ -60,6 +66,8 @@ Responses APIへは`store: false`を指定して送ります。
 | macOS | `~/Library/Application Support/jp-docs-studio/workspaces/<hash>/studio.json` |
 | Windows | `%APPDATA%\jp-docs-studio\workspaces\<hash>\studio.json` |
 | Linux | `$XDG_DATA_HOME/jp-docs-studio/...`（未設定なら`~/.local/share/jp-docs-studio/...`） |
+
+ChatGPTのログイン情報は、workspaceごとではなく`jp-docs-studio/credentials.json`に一つだけ保存します。
 
 `JP_DOCS_STUDIO_DATA_DIR`を設定すると、`jp-docs-studio`の代わりにそのディレクトリを使います。実際の保存先は画面の原稿一覧の下に表示します。
 
@@ -88,7 +96,7 @@ Responses APIへは`store: false`を指定して送ります。
 npm test               # ユニットテスト（Node Test Runner）
 npm run test:e2e       # 画面をビルドし、Playwright（Chromium）で主要フローを確認する
 npm run typecheck      # 型検査
-npm run test:ai-smoke  # 実際のOpenAI APIで1往復する（キーがある場合だけ。課金が発生します）
+npm run test:ai-smoke  # 実際のモデルで1往復する（ログイン済みかキーがある場合だけ。利用枠や課金を消費します）
 ```
 
 テストのAIは`tests/fixtures/fake-adapter.ts`の偽物を使います。偽物は`tests/e2e/server.ts`からだけ読み込み、通常の起動には含めません。E2Eは`test-results/screenshots/`へFocus、Discuss、Proposal、狭い画面の画像を保存します。
@@ -101,14 +109,15 @@ Studioのテストファイルは`*.spec.ts`と`*.e2e.ts`です。リポジト�
 | --- | --- |
 | `src/server/security/` | workspaceのパス検証、Host・Origin・独自ヘッダーの検査、CSP |
 | `src/server/services/` | 原稿、対話と修正案、AIへ送る文脈の切り出し、既存CLIの呼び出し |
-| `src/server/providers/` | `AiAdapter`とOpenAIの実装、指示文 |
+| `src/server/providers/` | `AiAdapter`、pi-ai（ChatGPT）とOpenAI APIの実装、使うAIの選択、指示文 |
 | `src/server/persistence/` | 対話データの保存先と、一時ファイルを経由した書き込み |
 | `src/client/` | React、CodeMirror 6の画面 |
 | `docs/handoff/` | 受け取った実装指示書、画面仕様、デザイン資料（原文のまま） |
 
 ## 制限と未確認の事項
 
-- 実際のOpenAI APIでの動作は、この実装の時点では確認していません。キーのある環境で`npm run test:ai-smoke`を実行してください。
+- 実際のモデルでの動作は、2026-10-23にmacOSで、ChatGPTのログインと`gpt-6-sol`の組み合わせだけを確認しました（`npm run test:ai-smoke`と画面からの質問）。`OPENAI_API_KEY`を使う場合は確認していません。
+- ChatGPTのサブスクリプションで使えるモデルと利用枠は、pi-aiのモデル一覧とは別にOpenAI側で決まります。`gpt-6-sol`以外は確認していません。
 - Windowsでの起動は確認していません。パスの検証はWindows形式の入力も扱うよう実装し、ユニットテストで確かめています。
 - E2EはChromiumだけで実行しています。IMEの変換はChromiumの開発者向けプロトコルで再現したもので、実際のOSのIMEでは確認していません。
 - workspaceを移動すると保存先のハッシュが変わり、それまでの対話は表示されません。
@@ -122,4 +131,4 @@ Studioのテストファイルは`*.spec.ts`と`*.e2e.ts`です。リポジト�
 - `plan-docs`の対話を画面から進める
 - `review-docs`のpacket、判定、記録、鮮度の確認を画面から扱い、指摘と対話を結び付ける
 - 古くなった対話を、書き手が選んだ位置へ手動で付け直す
-- OpenAI以外の`AiAdapter`（piやClaudeなどの実行器）
+- pi-aiの他のプロバイダー（Claudeのサブスクリプションなど）を選べるようにする
