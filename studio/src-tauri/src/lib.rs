@@ -14,11 +14,27 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
+use tauri::webview::PageLoadEvent;
 use tauri::{AppHandle, Manager, RunEvent, State, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tauri_plugin_opener::OpenerExt;
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(40);
+
+/// 自動テスト用の入口。debug ビルドでだけ環境変数を読み、release ビルドでは常に None になる。
+/// - JP_DOCS_STUDIO_E2E_START_WORKSPACE: 起動時の workspace（設定ファイルを読み書きしない）
+/// - JP_DOCS_STUDIO_E2E_WORKSPACE: workspace を選び直したときにダイアログの代わりに返すフォルダ
+/// - JP_DOCS_STUDIO_E2E_PICK_FILES: 参考資料の選択でダイアログの代わりに返すファイル（パス区切り）
+/// - JP_DOCS_STUDIO_E2E_SCRIPT: Studio の画面を読み込むたびに実行する JavaScript のファイル
+#[cfg(debug_assertions)]
+fn e2e_env(name: &str) -> Option<String> {
+    std::env::var(name).ok().filter(|value| !value.is_empty())
+}
+
+#[cfg(not(debug_assertions))]
+fn e2e_env(_name: &str) -> Option<String> {
+    None
+}
 
 struct Sidecar {
     child: Child,
@@ -177,6 +193,9 @@ fn open_workspace(app: &AppHandle, workspace: &Path) -> Result<(), String> {
 }
 
 fn pick_folder(app: &AppHandle) -> Option<PathBuf> {
+    if let Some(path) = e2e_env("JP_DOCS_STUDIO_E2E_WORKSPACE") {
+        return Some(PathBuf::from(path));
+    }
     app.dialog()
         .file()
         .set_title("執筆に使うフォルダ（workspace）を選ぶ")
@@ -224,23 +243,29 @@ async fn pick_references(
     state: State<'_, Studio>,
     document_path: String,
 ) -> Result<usize, String> {
-    let picker = app.clone();
-    let files = tauri::async_runtime::spawn_blocking(move || {
-        picker
-            .dialog()
-            .file()
-            .set_title("参考資料にするファイルを選ぶ")
-            .add_filter("Markdown とテキスト", &["md", "markdown", "txt"])
-            .blocking_pick_files()
-    })
-    .await
-    .map_err(|e| e.to_string())?;
-    let Some(files) = files else { return Ok(0) };
-    let paths: Vec<String> = files
-        .into_iter()
-        .filter_map(|file| file.into_path().ok())
-        .map(|path| path.to_string_lossy().to_string())
-        .collect();
+    let paths: Vec<String> = if let Some(list) = e2e_env("JP_DOCS_STUDIO_E2E_PICK_FILES") {
+        std::env::split_paths(&list)
+            .map(|path| path.to_string_lossy().to_string())
+            .collect()
+    } else {
+        let picker = app.clone();
+        let files = tauri::async_runtime::spawn_blocking(move || {
+            picker
+                .dialog()
+                .file()
+                .set_title("参考資料にするファイルを選ぶ")
+                .add_filter("Markdown とテキスト", &["md", "markdown", "txt"])
+                .blocking_pick_files()
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+        let Some(files) = files else { return Ok(0) };
+        files
+            .into_iter()
+            .filter_map(|file| file.into_path().ok())
+            .map(|path| path.to_string_lossy().to_string())
+            .collect()
+    };
     if paths.is_empty() {
         return Ok(0);
     }
@@ -293,12 +318,14 @@ async fn choose_workspace(app: AppHandle) -> Result<bool, String> {
     };
     let target = app.clone();
     tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
-        save_settings(
-            &target,
-            &DesktopSettings {
-                workspace: Some(workspace.clone()),
-            },
-        )?;
+        if persist_settings() {
+            save_settings(
+                &target,
+                &DesktopSettings {
+                    workspace: Some(workspace.clone()),
+                },
+            )?;
+        }
         open_workspace(&target, &workspace)
     })
     .await
@@ -318,6 +345,11 @@ fn native_ready(app: AppHandle) -> Result<String, String> {
         );
     }
     Ok(version)
+}
+
+/// 自動テストで起動したときは、利用者の設定ファイルを書き換えない。
+fn persist_settings() -> bool {
+    e2e_env("JP_DOCS_STUDIO_E2E_START_WORKSPACE").is_none()
 }
 
 fn fail(app: &AppHandle, message: &str) {
@@ -344,7 +376,17 @@ pub fn run() {
             native_ready
         ])
         .setup(|app| {
+            let e2e_script =
+                e2e_env("JP_DOCS_STUDIO_E2E_SCRIPT").and_then(|path| fs::read_to_string(path).ok());
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                .on_page_load(move |window, payload| {
+                    let studio_page = payload.url().host_str() == Some("127.0.0.1");
+                    if let (Some(script), true, PageLoadEvent::Finished) =
+                        (&e2e_script, studio_page, payload.event())
+                    {
+                        let _ = window.eval(script);
+                    }
+                })
                 .title("jp-docs Studio")
                 .inner_size(1440.0, 900.0)
                 .min_inner_size(900.0, 640.0)
@@ -353,8 +395,9 @@ pub fn run() {
             // ダイアログは待ちを伴うため、メインスレッドの外で workspace を決めてサーバーを起動する。
             let handle = app.handle().clone();
             std::thread::spawn(move || {
-                let saved = load_settings(&handle)
-                    .workspace
+                let saved = e2e_env("JP_DOCS_STUDIO_E2E_START_WORKSPACE")
+                    .map(PathBuf::from)
+                    .or_else(|| load_settings(&handle).workspace)
                     .filter(|path| path.is_dir());
                 let workspace = match saved.or_else(|| pick_folder(&handle)) {
                     Some(path) => path,
@@ -363,14 +406,16 @@ pub fn run() {
                         return;
                     }
                 };
-                if let Err(error) = save_settings(
-                    &handle,
-                    &DesktopSettings {
-                        workspace: Some(workspace.clone()),
-                    },
-                ) {
-                    fail(&handle, &format!("設定を保存できません: {error}"));
-                    return;
+                if persist_settings() {
+                    if let Err(error) = save_settings(
+                        &handle,
+                        &DesktopSettings {
+                            workspace: Some(workspace.clone()),
+                        },
+                    ) {
+                        fail(&handle, &format!("設定を保存できません: {error}"));
+                        return;
+                    }
                 }
                 if let Err(error) = open_workspace(&handle, &workspace) {
                     fail(&handle, &error);

@@ -16,7 +16,8 @@
     "test:e2e": "vite build && playwright test",
     "test:ai-smoke": "node tests/smoke/openai-smoke.ts",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build"
+    "desktop:build": "CI=true tauri build",
+    "test:desktop": "tauri build --debug --bundles app && node tests/desktop/run.mjs"
   },
   "engines": {
     "node": ">=22.18.0"

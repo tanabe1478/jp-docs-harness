@@ -28,7 +28,15 @@ npm run desktop:build
 - Studioのサーバー（TypeScriptのまま）、ビルド済みの画面、本番用の依存
 - jp-docs-harnessのCLI（`bin`、`lib`、`schemas`）と本番用の依存（textlintなど）
 
+`desktop:build`は`CI=true`を付けて`tauri build`を実行します。`.dmg`を作る際のFinderの見た目を整える処理が、ディスクイメージを使用中のままにして失敗することがあるため、その処理を省いています。
+
 開発中は`npm run desktop:dev`で、配布用のバンドルを作らずに起動できます。
+
+### 署名
+
+アプリはアドホック署名（`signingIdentity: "-"`）で、hardened runtimeを有効にして署名します。同梱のNode（V8）は実行時に機械語を生成するため、`src-tauri/Entitlements.plist`でJITを許可しています。これがないと、署名したアプリではサーバーが起動しません。
+
+アドホック署名のアプリは、ビルドしたMacで使う分には動きます。ほかの人へ配る場合は、Apple Developer ProgramのDeveloper ID証明書での署名とAppleの公証が必要です。このリポジトリでは設定していません。
 
 ### 起動と使い方
 
@@ -42,6 +50,10 @@ npm run desktop:build
 - ChatGPTのログイン画面を既定のブラウザで開く
 
 画面からネイティブ機能へ渡すのは、ファイル選択・URLを開く・workspaceの選び直し・接続の確認の四つのコマンドだけです。外部ファイルの登録は、アプリ本体だけが知るトークンでサーバーへ送るため、画面のJavaScriptからは任意のパスを登録できません。
+
+### 対応環境
+
+macOS（Apple Silicon）とLinux（Debian系。確認したのはarm64）を対象にしています。Windowsは対象外です。コードはWindowsのパスも扱うように書いていますが、ビルドも起動も確認していません。
 
 デスクトップ版の設定は`~/Library/Application Support/jp.tanabe1478.jp-docs-studio/desktop.json`に、サーバーのログは`~/Library/Logs/jp.tanabe1478.jp-docs-studio/studio-server.log`に書き込みます。
 
@@ -141,7 +153,11 @@ npm run test:e2e       # 画面をビルドし、Playwright（Chromium と WebKi
 npm run typecheck      # 型検査
 npm run test:ai-smoke  # 実際のモデルで1往復する（ログイン済みかキーがある場合だけ。利用枠や課金を消費します）
 (cd src-tauri && cargo test)  # デスクトップ版の Rust 側
+npm run test:desktop   # デスクトップ版の通しのテスト（macOS。debug ビルドを作って実際のウィンドウで操作する）
+bash tests/desktop/linux-docker.sh  # Linux 版を Docker の中でビルドし、Xvfb の上で同じ通しのテストを実行する
 ```
+
+デスクトップ版の通しのテストは、debugビルドだけが読む環境変数で、ファイル選択とworkspaceの選び直しのダイアログを決まったパスの返却に置き換えます。そのうえで、実際のウィンドウの中で`tests/desktop/in-window.js`を実行し、入力と自動保存、外部ファイルの参考資料の登録、workspaceの選び直し、強制終了時のサーバーの停止を確かめます。macOSでは`test-results/desktop/`にウィンドウを撮影します。releaseビルドにはこの置き換えは入りません。
 
 テストのAIは`tests/fixtures/fake-adapter.ts`の偽物を使います。偽物は`tests/e2e/server.ts`からだけ読み込み、通常の起動には含めません。E2Eは`test-results/screenshots/`へFocus、Discuss、Proposal、狭い画面の画像を保存します。
 
@@ -166,10 +182,14 @@ Studioのテストファイルは`*.spec.ts`と`*.e2e.ts`です。リポジト�
 
 - 実際のモデルでの動作は、2026-10-23にmacOSで、ChatGPTのログインと`gpt-6-sol`の組み合わせだけを確認しました（`npm run test:ai-smoke`とWeb版の画面からの質問）。`OPENAI_API_KEY`を使う場合は確認していません。
 - ChatGPTのサブスクリプションで使えるモデルと利用枠は、pi-aiのモデル一覧とは別にOpenAI側で決まります。`gpt-6-sol`以外は確認していません。
-- デスクトップ版は、macOS（Apple Silicon）でのビルドと起動、画面からネイティブ機能への接続、終了時と異常終了時のサーバーの停止を確認しました。ファイル選択ダイアログとworkspaceの選び直しは、ダイアログを人が操作する必要があるため自動では確認していません。
-- デスクトップ版のビルドはmacOSだけで行っています。WindowsとLinuxでのビルドと起動は確認していません。配布には署名と公証が必要ですが、設定していません。
+- デスクトップ版は、2026-10-23に次の環境で、ビルドと通しのテスト（入力と自動保存、外部ファイルの参考資料の登録、workspaceの選び直し、強制終了時のサーバーの停止）を確認しました。
+  - macOS 26（Apple Silicon）。releaseビルドをアドホック署名し、起動と検査の実行も確かめた
+  - Linux（Debian bookworm、arm64）。Dockerの中でdebをインストールし、Xvfbの上で起動した
+- 通しのテストでは、OSのファイル選択とフォルダ選択のダイアログそのものは決まったパスの返却に置き換えています。ダイアログの表示と操作は自動では確認していません。
+- Linuxのx86_64版はビルドしていません。Windowsは対象外です。
+- 公証はしていません。Developer ID証明書とAppleのアカウントが必要なためです。
 - Web版のWindowsでの起動は確認していません。パスの検証はWindows形式の入力も扱うよう実装し、ユニットテストで確かめています。
-- IMEの変換は、ChromiumのE2Eで開発者向けプロトコルを使って再現したものです。WebKitと実際のOSのIMEでは確認していません。
+- IMEの変換は、ChromiumのE2Eで開発者向けプロトコルを使って再現したものです。WebKit（デスクトップ版のウィンドウを含む）では確定した文字列の入力だけを確かめており、実際のOSのIMEでの変換は確認していません。
 - workspaceを移動すると保存先のハッシュが変わり、それまでの対話は表示されません。
 - 原稿のどこかを編集すると、その原稿の対話はすべて古い位置として扱います。
 - 改行コードが混在するファイルは、開いたときに多い方へ揃え、保存時にその形で書き込みます。
